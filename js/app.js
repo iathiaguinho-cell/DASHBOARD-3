@@ -1,5 +1,4 @@
-/* 
-==================================================================
+/* ==================================================================
 CONFIGURAÇÃO DO FIREBASE
 ==================================================================
 */
@@ -13,40 +12,29 @@ const firebaseConfig = {
   appId: "1:736157192887:web:c23d3daade848a33d67332"
 };
 
-/* 
-==================================================================
+/* ==================================================================
 CONFIGURAÇÃO DO IMGBB
 ==================================================================
 */
 const imgbbApiKey = "57cb1c5a02fb6e5ef2700543d6245b70";
 
-/* 
-==================================================================
+/* ==================================================================
 SISTEMA DE NOTIFICAÇÕES
 ==================================================================
 */
 function showNotification(message, type = 'success') {
-  // Remove notificações antigas
   const existing = document.getElementById('notification');
   if (existing) {
     existing.remove();
   }
-  
-  // Cria nova notificação
   const notification = document.createElement('div');
   notification.id = 'notification';
   notification.className = `notification ${type}`;
   notification.textContent = message;
-  
-  // Adiciona ao DOM
   document.body.appendChild(notification);
-  
-  // Anima entrada
   setTimeout(() => {
     notification.classList.add('show');
   }, 10);
-  
-  // Anima saída
   setTimeout(() => {
     notification.classList.remove('show');
     setTimeout(() => {
@@ -57,29 +45,20 @@ function showNotification(message, type = 'success') {
   }, 4000);
 }
 
-/* 
-==================================================================
+/* ==================================================================
 INICIALIZAÇÃO DO SISTEMA
 ==================================================================
 */
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicializa Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   
-  // Variáveis do sistema
   let currentUser = null;
   let allServiceOrders = {};
   let lightboxMedia = [];
   let currentLightboxIndex = 0;
   let filesToUpload = null;
-  let vehiclesTriggeringAlert = new Set();
   
-  /* 
-  ==================================================================
-  CONFIGURAÇÕES DO SISTEMA
-  ==================================================================
-  */
   const USERS = [
     { name: 'Augusto', role: 'Gestor' }, 
     { name: 'William Barbosa', role: 'Atendente' },
@@ -100,11 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     'Finalizado-Aguardando-Retirada': { label: 'FINALIZADO / RETIRADA', color: 'orange', blinkClass: 'blinking-finalizado' }
   };
   
-  /* 
-  ==================================================================
-  REFERÊNCIAS DOS ELEMENTOS DO DOM
-  ==================================================================
-  */
   const userScreen = document.getElementById('userScreen');
   const app = document.getElementById('app');
   const userList = document.getElementById('userList');
@@ -126,19 +100,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const alertLed = document.getElementById('alert-led');
   const postLogActions = document.getElementById('post-log-actions');
   
-  /* 
-  ==================================================================
-  FUNÇÕES AUXILIARES
-  ==================================================================
-  */
   const formatStatus = (status) => status.replace(/-/g, ' ');
   
-  /* 
-  ==================================================================
-  PAINEL DE ALERTA
-  ==================================================================
-  */
   const updateAttentionPanel = () => {
+    let vehiclesTriggeringAlert = new Set();
+    Object.values(allServiceOrders).forEach(os => {
+        if (ATTENTION_STATUSES[os.status]) {
+            vehiclesTriggeringAlert.add(os.id);
+        }
+    });
+
     attentionPanel.innerHTML = Object.entries(ATTENTION_STATUSES).map(([statusKey, config]) => {
         const vehiclesInStatus = Object.values(allServiceOrders).filter(os => os.status === statusKey);
         const hasVehicles = vehiclesInStatus.length > 0;
@@ -155,13 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }).join('');
+    updateLedState(vehiclesTriggeringAlert);
   };
   
-  /* 
-  ==================================================================
-  AUTENTICAÇÃO E CONTROLE DE USUÁRIO
-  ==================================================================
-  */
   const loginUser = (user) => {
     currentUser = user;
     localStorage.setItem('currentUser', JSON.stringify(user));
@@ -183,11 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  /* 
-  ==================================================================
-  RENDERIZAÇÃO DO KANBAN
-  ==================================================================
-  */
   const renderKanban = (deliveredFilter = '') => {
     const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
     kanbanBoard.innerHTML = STATUS_LIST.map(status => {
@@ -219,20 +181,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const lowerCaseFilter = deliveredFilter.toLowerCase();
     Object.values(allServiceOrders).forEach(os => {
-      // Filtra O.S. entregues se houver filtro
       if (os.status === 'Entregue' && deliveredFilter) {
         const searchableText = `${os.placa} ${os.modelo} ${os.cliente}`.toLowerCase();
         if (!searchableText.includes(lowerCaseFilter)) return;
       }
       
-      // Renderiza o veículo na coluna adequada
       const list = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
       if (list) list.insertAdjacentHTML('beforeend', createCardHTML(os));
     });
     
     updateAttentionPanel();
     
-    // Configura o filtro para O.S. entregues
     if (document.getElementById('searchDeliveredInput')) {
       document.getElementById('searchDeliveredInput').value = deliveredFilter;
       document.getElementById('searchDeliveredInput').addEventListener('input', (e) => {
@@ -241,17 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  /* 
-  ==================================================================
-  CRIAÇÃO DOS CARDS NO KANBAN
-  ==================================================================
-  */
   const createCardHTML = (os) => {
     const currentIndex = STATUS_LIST.indexOf(os.status);
     const prevStatus = currentIndex > 0 ? STATUS_LIST[currentIndex - 1] : null;
     const nextStatus = currentIndex < STATUS_LIST.length - 1 ? STATUS_LIST[currentIndex + 1] : null;
     
-    // Botões de navegação entre status
     const prevButton = prevStatus ? 
       `<button data-os-id="${os.id}" data-new-status="${prevStatus}" class="btn-move-status p-2 rounded-full hover:bg-gray-100 transition-colors">
         <i class='bx bx-chevron-left text-xl text-gray-600'></i>
@@ -264,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </button>` : 
       `<div class="w-10 h-10"></div>`;
     
-    // Informações do responsável (varia conforme o status)
     let responsibleInfo = `<p class="text-xs text-gray-500 mt-1">Atendente: ${os.responsible || 'N/D'}</p>`;
     if (os.status === 'Em-Execucao' && os.responsibleForService) {
         responsibleInfo = `<p class="text-xs text-red-600 font-medium mt-1">Mecânico: ${os.responsibleForService}</p>`;
@@ -272,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
         responsibleInfo = `<p class="text-xs text-purple-600 font-medium mt-1">Orçamento: ${os.responsibleForBudget}</p>`;
     }
     
-    // Informação de KM
     const kmInfo = `<p class="text-xs text-gray-500">KM: ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}</p>`;
     
     return `
@@ -292,11 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
   };
   
-  /* 
-  ==================================================================
-  LISTENERS DO FIREBASE
-  ==================================================================
-  */
   const listenToServiceOrders = () => {
     db.ref('serviceOrders').on('value', snapshot => {
       allServiceOrders = snapshot.val() || {};
@@ -309,12 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
   
-  /* 
-  ==================================================================
-  CONTROLE DO LED DE ALERTA
-  ==================================================================
-  */
-  const updateLedState = () => {
+  const updateLedState = (vehiclesTriggeringAlert) => {
     if (vehiclesTriggeringAlert.size > 0 && attentionPanelContainer.classList.contains('collapsed')) {
         alertLed.classList.remove('hidden');
     } else {
@@ -322,83 +263,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  /* 
-  ==================================================================
-  ATUALIZAÇÃO DE STATUS DA O.S.
-  ==================================================================
-  */
   const updateServiceOrderStatus = (osId, newStatus) => {
     const os = allServiceOrders[osId];
     if (!os) return;
     
-    // Atualizações para o Firebase
     const updates = { 
       status: newStatus, 
       lastUpdate: new Date().toISOString() 
     };
     
-    // Define responsáveis específicos conforme o status
     if (newStatus === 'Em-Analise') updates.responsibleForBudget = currentUser.name;
     else if (newStatus === 'Em-Execucao') updates.responsibleForService = currentUser.name;
     else if (newStatus === 'Entregue') updates.responsibleForDelivery = currentUser.name;
     
-    // Atualiza no Firebase
     db.ref(`serviceOrders/${osId}`).update(updates);
-    
-    // Atualiza o estado de alerta
-    vehiclesTriggeringAlert.delete(osId);
-    if (Object.keys(ATTENTION_STATUSES).includes(newStatus)) {
-        vehiclesTriggeringAlert.add(osId);
-    }
-    updateLedState();
     
     showNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)}`);
   };
   
-  /* 
-  ==================================================================
-  MODAL DE DETALHES DA O.S.
-  ==================================================================
-  */
   const openDetailsModal = (osId) => {
     const os = allServiceOrders[osId];
     if (!os) return;
     
-    // Preenche informações principais
     document.getElementById('detailsPlacaModelo').textContent = `${os.placa} - ${os.modelo}`;
     document.getElementById('detailsCliente').textContent = `Cliente: ${os.cliente}`;
     document.getElementById('detailsKm').textContent = `KM: ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}`;
     
-    // Preenche responsáveis
     document.getElementById('responsible-attendant').textContent = os.responsible || 'N/D';
     document.getElementById('responsible-budget').textContent = os.responsibleForBudget || 'N/D';
     document.getElementById('responsible-service').textContent = os.responsibleForService || 'N/D';
     document.getElementById('responsible-delivery').textContent = os.responsibleForDelivery || 'N/D';
     
-    // Configura formulário de log
+    const observacoesContainer = document.getElementById('detailsObservacoes');
+    if (os.observacoes) {
+      observacoesContainer.innerHTML = `
+        <h4 class="text-sm font-semibold text-gray-500 mb-1">Queixa do Cliente:</h4>
+        <p class="text-gray-800 bg-yellow-100 p-3 rounded-md whitespace-pre-wrap">${os.observacoes}</p>
+      `;
+      observacoesContainer.classList.remove('hidden');
+    } else {
+      observacoesContainer.classList.add('hidden');
+    }
+    
     document.getElementById('logOsId').value = osId;
+    logForm.reset();
+    document.getElementById('fileName').textContent = '';
+    filesToUpload = null;
+    postLogActions.style.display = 'none';
     
-    // Renderiza timeline
     renderTimeline(os);
-    
-    // Renderiza galeria de mídia
     renderMediaGallery(os);
     
-    // Mostra modal
     detailsModal.classList.remove('hidden');
     detailsModal.classList.add('flex');
   };
   
-  /* 
-  ==================================================================
-  RENDERIZAÇÃO DA TIMELINE
-  ==================================================================
-  */
   const renderTimeline = (os) => {
     const timelineContainer = document.getElementById('timelineContainer');
     const logs = os.logs || [];
     
-    timelineContainer.innerHTML = logs.map(log => {
+    timelineContainer.innerHTML = Object.values(logs).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(log => {
       const date = new Date(log.timestamp);
       const formattedDate = date.toLocaleDateString('pt-BR');
       const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -409,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (log.type === 'status') {
         iconClass = 'bx-transfer';
         itemClass = 'timeline-item-status';
-      } else if (log.type === 'value') {
+      } else if (log.value) {
         iconClass = 'bx-dollar';
         itemClass = 'timeline-item-value';
       }
@@ -419,9 +343,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="timeline-icon">
             <i class='bx ${iconClass}'></i>
           </div>
-          <div class="timeline-content">
+          <div class="bg-gray-50 p-3 rounded-lg">
             <div class="flex justify-between items-start mb-1">
-              <h4 class="font-semibold text-gray-800">${log.user}</h4>
+              <h4 class="font-semibold text-gray-800 text-sm">${log.user}</h4>
               <span class="text-xs text-gray-500">${formattedDate} ${formattedTime}</span>
             </div>
             <p class="text-gray-700 text-sm">${log.description}</p>
@@ -433,80 +357,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
     
     if (logs.length === 0) {
-      timelineContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhum registro encontrado.</p>';
+      timelineContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum registro encontrado.</p>';
     }
   };
   
-  /* 
-  ==================================================================
-  RENDERIZAÇÃO DA GALERIA DE MÍDIA
-  ==================================================================
-  */
   const renderMediaGallery = (os) => {
     const thumbnailGrid = document.getElementById('thumbnail-grid');
     const media = os.media || [];
     
-    lightboxMedia = media;
+    lightboxMedia = Object.values(media);
     
-    thumbnailGrid.innerHTML = media.map((item, index) => {
-      if (item.type === 'image') {
+    thumbnailGrid.innerHTML = lightboxMedia.map((item, index) => {
+        const isImage = item.type.startsWith('image/');
         return `
-          <div class="thumbnail-item" data-index="${index}">
-            <img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy">
+          <div class="aspect-square bg-gray-200 rounded-md overflow-hidden cursor-pointer thumbnail-item flex items-center justify-center" data-index="${index}">
+            ${isImage ? `<img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy" class="w-full h-full object-cover">` : `<i class='bx bx-play-circle text-4xl text-blue-500'></i>`}
           </div>
         `;
-      } else if (item.type === 'video') {
-        return `
-          <div class="thumbnail-item" data-index="${index}">
-            <i class='bx bx-play-circle text-blue-500'></i>
-          </div>
-        `;
-      }
-      return '';
     }).join('');
     
-    if (media.length === 0) {
+    if (lightboxMedia.length === 0) {
       thumbnailGrid.innerHTML = `
-        <div class="col-span-4 text-center py-8">
-          <i class='bx bx-image text-4xl text-gray-400 mb-2'></i>
-          <p class="text-gray-500">Nenhuma mídia adicionada</p>
+        <div class="col-span-full text-center py-8 text-gray-400">
+          <i class='bx bx-image text-4xl mb-2'></i>
+          <p class="text-sm">Nenhuma mídia adicionada</p>
         </div>
       `;
     }
   };
   
-  /* 
-  ==================================================================
-  UPLOAD DE MÍDIA
-  ==================================================================
-  */
   const uploadToImgBB = async (file) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    
-    try {
+      const formData = new FormData();
+      formData.append('image', file);
       const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-        method: 'POST',
-        body: formData
+          method: 'POST',
+          body: formData,
       });
-      
+      if (!response.ok) {
+          throw new Error(`Erro no upload: ${response.statusText}`);
+      }
       const data = await response.json();
       if (data.success) {
-        return data.data.url;
+          return data.data.url;
       } else {
-        throw new Error('Falha no upload');
+          throw new Error(data.error.message || 'Falha ao obter URL da imagem.');
       }
-    } catch (error) {
-      console.error('Erro no upload:', error);
-      throw error;
-    }
   };
   
-  /* 
-  ==================================================================
-  LIGHTBOX
-  ==================================================================
-  */
   const openLightbox = (index) => {
     if (!lightboxMedia || lightboxMedia.length === 0) return;
     
@@ -514,32 +411,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const media = lightboxMedia[index];
     const lightboxContent = document.getElementById('lightbox-content');
     
-    if (media.type === 'image') {
+    const isImage = media.type.startsWith('image/');
+    if (isImage) {
       lightboxContent.innerHTML = `<img src="${media.url}" alt="Imagem" class="max-w-full max-h-full object-contain">`;
-    } else if (media.type === 'video') {
+    } else {
       lightboxContent.innerHTML = `<video src="${media.url}" controls class="max-w-full max-h-full"></video>`;
     }
     
-    // Configura botões de navegação
     document.getElementById('lightbox-prev').style.display = index > 0 ? 'block' : 'none';
     document.getElementById('lightbox-next').style.display = index < lightboxMedia.length - 1 ? 'block' : 'none';
     
-    // Configura download
     const downloadBtn = document.getElementById('lightbox-download');
     downloadBtn.href = media.url;
-    downloadBtn.download = `media_${index + 1}.${media.type === 'image' ? 'jpg' : 'mp4'}`;
+    downloadBtn.download = `media_${index + 1}`;
     
     lightbox.classList.remove('hidden');
     lightbox.classList.add('flex');
   };
   
-  /* 
-  ==================================================================
-  EVENT LISTENERS
-  ==================================================================
-  */
-  
-  // Login de usuário
   userList.addEventListener('click', (e) => {
     const userBtn = e.target.closest('.user-btn');
     if (userBtn) {
@@ -548,21 +437,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Logout
   logoutButton.addEventListener('click', () => {
     localStorage.removeItem('currentUser');
     location.reload();
   });
   
-  // Toggle painel de alertas
   togglePanelBtn.addEventListener('click', () => {
     attentionPanelContainer.classList.toggle('collapsed');
     const icon = togglePanelBtn.querySelector('i');
     icon.classList.toggle('rotate-180');
-    updateLedState();
+    updateAttentionPanel();
   });
   
-  // Clique no painel de atenção para abrir detalhes
   attentionPanel.addEventListener('click', (e) => {
     const vehicleElement = e.target.closest('.attention-vehicle');
     if (vehicleElement) {
@@ -571,7 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Kanban - clique nos cards
   kanbanBoard.addEventListener('click', (e) => {
     const card = e.target.closest('.vehicle-card');
     const moveBtn = e.target.closest('.btn-move-status');
@@ -588,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Toggle colunas do kanban
   kanbanBoard.addEventListener('click', (e) => {
     const toggleBtn = e.target.closest('.toggle-column-btn');
     if (toggleBtn) {
@@ -599,32 +483,28 @@ document.addEventListener('DOMContentLoaded', () => {
       vehicleList.classList.toggle('collapsed');
       icon.classList.toggle('rotate-180');
       
-      // Salva estado no localStorage
       const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
       collapsedState[status] = vehicleList.classList.contains('collapsed');
       localStorage.setItem('collapsedColumns', JSON.stringify(collapsedState));
       
-      // Atualiza renderização para mostrar/ocultar LED
       setTimeout(() => renderKanban(), 100);
     }
   });
   
-  // Modal - fechar
   document.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-close-modal') || e.target.classList.contains('modal')) {
-      osModal.classList.add('hidden');
+    if (e.target.closest('.btn-close-modal') || e.target.id === 'detailsModal') {
       detailsModal.classList.add('hidden');
-      lightbox.classList.add('hidden');
+    }
+     if (e.target.closest('.btn-close-modal') || e.target.id === 'osModal') {
+      osModal.classList.add('hidden');
     }
   });
   
-  // Nova O.S.
   addOSBtn.addEventListener('click', () => {
     document.getElementById('osModalTitle').textContent = 'Nova Ordem de Serviço';
     document.getElementById('osId').value = '';
     osForm.reset();
     
-    // Popula select de responsáveis
     const responsavelSelect = document.getElementById('osResponsavel');
     responsavelSelect.innerHTML = '<option value="">Selecione um responsável...</option>' +
       USERS.map(user => `<option value="${user.name}">${user.name}</option>`).join('');
@@ -633,7 +513,6 @@ document.addEventListener('DOMContentLoaded', () => {
     osModal.classList.add('flex');
   });
   
-  // Formulário de O.S.
   osForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -655,22 +534,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const osId = document.getElementById('osId').value;
     
     if (osId) {
-      // Editar O.S. existente
       db.ref(`serviceOrders/${osId}`).update(osData);
       showNotification('O.S. atualizada com sucesso!');
     } else {
-      // Criar nova O.S.
-      db.ref('serviceOrders').push(osData);
+      const newOsRef = db.ref('serviceOrders').push();
+      newOsRef.set(osData);
       showNotification('Nova O.S. criada com sucesso!');
     }
     
     osModal.classList.add('hidden');
   });
   
-  // Formulário de log
   logForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Salvando...`;
+
     const osId = document.getElementById('logOsId').value;
     const description = document.getElementById('logDescricao').value;
     const parts = document.getElementById('logPecas').value;
@@ -680,54 +560,48 @@ document.addEventListener('DOMContentLoaded', () => {
       timestamp: new Date().toISOString(),
       user: currentUser.name,
       description: description,
-      type: 'log'
+      type: 'log',
+      parts: parts || null,
+      value: value || null
     };
     
-    if (parts) logEntry.parts = parts;
-    if (value) logEntry.value = parseFloat(value);
-    
-    // Upload de mídia se houver
-    if (filesToUpload && filesToUpload.length > 0) {
-      try {
-        showNotification('Fazendo upload das mídias...', 'info');
+    try {
+        if (filesToUpload && filesToUpload.length > 0) {
+            submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Enviando mídia...`;
+            const mediaPromises = Array.from(filesToUpload).map(file => 
+                uploadToImgBB(file).then(url => ({
+                    type: file.type,
+                    url: url,
+                    timestamp: new Date().toISOString()
+                }))
+            );
+            const mediaResults = await Promise.all(mediaPromises);
+            const mediaRef = db.ref(`serviceOrders/${osId}/media`);
+            const snapshot = await mediaRef.once('value');
+            const currentMedia = snapshot.val() || [];
+            await mediaRef.set([...currentMedia, ...mediaResults]);
+        }
         
-        const mediaPromises = Array.from(filesToUpload).map(async (file) => {
-          const url = await uploadToImgBB(file);
-          return {
-            type: file.type.startsWith('image/') ? 'image' : 'video',
-            url: url,
-            timestamp: new Date().toISOString()
-          };
-        });
-        
-        const mediaResults = await Promise.all(mediaPromises);
-        
-        // Adiciona mídia à O.S.
-        const currentMedia = allServiceOrders[osId].media || [];
-        db.ref(`serviceOrders/${osId}/media`).set([...currentMedia, ...mediaResults]);
-        
+        const logsRef = db.ref(`serviceOrders/${osId}/logs`);
+        const snapshot = await logsRef.once('value');
+        const currentLogs = snapshot.val() || [];
+        await logsRef.set([...currentLogs, logEntry]);
+
+        logForm.reset();
         filesToUpload = null;
         document.getElementById('fileName').textContent = '';
-      } catch (error) {
-        showNotification('Erro no upload de mídia', 'error');
-        return;
-      }
+        postLogActions.style.display = 'flex';
+        showNotification('Registro adicionado com sucesso!');
+
+    } catch (error) {
+        console.error("Erro ao salvar registro:", error);
+        showNotification(`Erro: ${error.message}`, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class='bx bx-message-square-add'></i> Adicionar ao Histórico`;
     }
-    
-    // Adiciona log ao histórico
-    const currentLogs = allServiceOrders[osId].logs || [];
-    db.ref(`serviceOrders/${osId}/logs`).set([...currentLogs, logEntry]);
-    
-    // Limpa formulário
-    logForm.reset();
-    
-    // Mostra ações pós-log
-    postLogActions.style.display = 'flex';
-    
-    showNotification('Registro adicionado com sucesso!');
   });
   
-  // Ações pós-log
   document.getElementById('btn-move-next').addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
@@ -754,12 +628,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.getElementById('btn-stay').addEventListener('click', () => {
     postLogActions.style.display = 'none';
-    const osId = document.getElementById('logOsId').value;
-    renderTimeline(allServiceOrders[osId]);
-    renderMediaGallery(allServiceOrders[osId]);
   });
   
-  // Atualização de KM
   kmUpdateForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -773,7 +643,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Exclusão de O.S.
   document.getElementById('deleteOsBtn').addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
@@ -785,7 +654,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Mídia - câmera e galeria
   openCameraBtn.addEventListener('click', () => {
     mediaInput.setAttribute('capture', 'camera');
     mediaInput.click();
@@ -800,11 +668,12 @@ document.addEventListener('DOMContentLoaded', () => {
     filesToUpload = e.target.files;
     if (filesToUpload.length > 0) {
       const fileNames = Array.from(filesToUpload).map(f => f.name).join(', ');
-      document.getElementById('fileName').textContent = `${filesToUpload.length} arquivo(s) selecionado(s): ${fileNames}`;
+      document.getElementById('fileName').textContent = `${filesToUpload.length} arquivo(s) selecionado(s)`;
+    } else {
+      document.getElementById('fileName').textContent = '';
     }
   });
   
-  // Lightbox - galeria de mídia
   document.addEventListener('click', (e) => {
     const thumbnailItem = e.target.closest('.thumbnail-item');
     if (thumbnailItem && thumbnailItem.dataset.index !== undefined) {
@@ -812,7 +681,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Lightbox - navegação
   document.getElementById('lightbox-prev').addEventListener('click', () => {
     if (currentLightboxIndex > 0) {
       openLightbox(currentLightboxIndex - 1);
@@ -833,7 +701,6 @@ document.addEventListener('DOMContentLoaded', () => {
     lightbox.classList.add('hidden');
   });
   
-  // Lightbox - copiar URL
   document.getElementById('lightbox-copy').addEventListener('click', () => {
     const media = lightboxMedia[currentLightboxIndex];
     navigator.clipboard.writeText(media.url).then(() => {
@@ -841,7 +708,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Inicialização
   checkLoggedInUser();
 });
 
