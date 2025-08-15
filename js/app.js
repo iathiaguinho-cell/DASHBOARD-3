@@ -73,11 +73,14 @@ document.addEventListener('DOMContentLoaded', () => {
     'Servico-Autorizado', 'Em-Execucao', 'Finalizado-Aguardando-Retirada', 'Entregue'
   ];
   
+  // START OF ALERT LOGIC CHANGE
   const ATTENTION_STATUSES = {
-    'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow', blinkClass: 'blinking-aguardando' },
-    'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green', blinkClass: 'blinking-autorizado' },
+    'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow' },
+    'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green' },
     'Finalizado-Aguardando-Retirada': { label: 'FINALIZADO / RETIRADA', color: 'orange', blinkClass: 'blinking-finalizado' }
   };
+  const LED_TRIGGER_STATUSES = ['Aguardando-Mecanico', 'Servico-Autorizado'];
+  // END OF ALERT LOGIC CHANGE
   
   const userScreen = document.getElementById('userScreen');
   const app = document.getElementById('app');
@@ -103,17 +106,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatStatus = (status) => status.replace(/-/g, ' ');
   
   const updateAttentionPanel = () => {
+    // START OF ALERT LOGIC CHANGE
     let vehiclesTriggeringAlert = new Set();
     Object.values(allServiceOrders).forEach(os => {
-        if (ATTENTION_STATUSES[os.status]) {
+        if (LED_TRIGGER_STATUSES.includes(os.status)) {
             vehiclesTriggeringAlert.add(os.id);
         }
     });
+    // END OF ALERT LOGIC CHANGE
 
     attentionPanel.innerHTML = Object.entries(ATTENTION_STATUSES).map(([statusKey, config]) => {
         const vehiclesInStatus = Object.values(allServiceOrders).filter(os => os.status === statusKey);
         const hasVehicles = vehiclesInStatus.length > 0;
-        const blinkingClass = hasVehicles ? config.blinkClass : '';
+        const blinkingClass = (hasVehicles && config.blinkClass) ? config.blinkClass : '';
         const vehicleListHTML = hasVehicles 
             ? vehiclesInStatus.map(os => `<p class="cursor-pointer attention-vehicle text-white hover:text-blue-300" data-os-id="${os.id}">${os.placa} - ${os.modelo}</p>`).join('')
             : `<p class="text-gray-400">- Vazio -</p>`;
