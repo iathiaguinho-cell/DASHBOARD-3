@@ -79,6 +79,7 @@ body {
   border-bottom: 1px solid #e2e8f0;
   padding: 1rem 1.5rem;
   position: relative;
+  flex-shrink: 0;
 }
 
 .modal-body {
@@ -93,6 +94,7 @@ body {
   padding: 1rem 1.5rem;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 /* =============== BOTÕES =============== */
@@ -112,20 +114,10 @@ body {
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.btn-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* =============== TIMELINE =============== */
 .timeline { 
   border-left: 3px solid #e5e7eb; 
   position: relative;
-  padding-left: 1.5rem;
 }
 
 .timeline-item { 
@@ -136,7 +128,7 @@ body {
 
 .timeline-icon {
   position: absolute; 
-  left: -1.875rem; 
+  left: -0.875rem;
   top: 0.25rem;
   width: 1.75rem; 
   height: 1.75rem;
@@ -251,10 +243,10 @@ body {
   background-color: #ef4444;
 }
 
-/* =============== LAYOUT DA FICHA DE ATENDIMENTO =============== */
+/* =============== LAYOUT DA FICHA DE ATENDIMENTO (RESPONSIVO) =============== */
 .os-details-container {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
 }
 
@@ -263,94 +255,25 @@ body {
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  position: relative;
-}
-
-.os-main-info {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 1rem;
-}
-
-.os-vehicle-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.os-placa {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.25;
-}
-
-.os-modelo {
-  font-size: 1.25rem;
-  color: #475569;
-  font-weight: 500;
-}
-
-.os-cliente {
-  font-size: 1.125rem;
-  color: #64748b;
-  margin-top: 0.5rem;
-}
-
-.os-km {
-  font-size: 1.125rem;
-  color: #1e40af;
-  font-weight: 600;
-  margin-top: 0.25rem;
-}
-
-.os-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.os-action-btn {
-  width: 100%;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
 }
 
 .os-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr; /* Layout de uma coluna para mobile */
   gap: 1.5rem;
+  align-items: start;
 }
 
-@media (max-width: 1024px) {
+/* A partir de 1024px (telas grandes), muda para duas colunas */
+@media (min-width: 1024px) {
   .os-content {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 400px; /* Coluna de ações com 400px */
   }
 }
 
-.os-media-section {
-  background: white;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.os-timeline-section {
-  background: white;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
 .os-actions-section {
-  background: white;
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   position: sticky;
-  top: 2rem;
+  top: 1rem;
   align-self: start;
 }
 
@@ -361,166 +284,5 @@ body {
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e2e8f0;
-}
-
-.responsibles-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.responsible-item {
-  background: #f8fafc;
-  border-radius: 6px;
-  padding: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.responsible-label {
-  font-weight: 500;
-  color: #64748b;
-}
-
-.responsible-value {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.thumbnail-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-
-.thumbnail-item {
-  aspect-ratio: 1/1;
-  background: #f1f5f9;
-  border-radius: 6px;
-  overflow: hidden;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.thumbnail-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumbnail-item i {
-  font-size: 1.5rem;
-  color: #94a3b8;
-}
-
-.log-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.log-form-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
-
-.post-log-actions {
-  display: none;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.km-update-form {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.km-input {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-
-.km-button {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.km-button:hover {
-  background: #2563eb;
-}
-
-.delete-os-button {
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem;
-  width: 100%;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin-top: 1.5rem;
-}
-
-.delete-os-button:hover {
-  background: #dc2626;
-}
-
-/* =============== ESTILOS MOBILE =============== */
-@media (max-width: 640px) {
-  .os-header {
-    padding: 1rem;
-  }
-  
-  .os-placa {
-    font-size: 1.5rem;
-  }
-  
-  .os-modelo {
-    font-size: 1rem;
-  }
-  
-  .os-cliente, .os-km {
-    font-size: 0.875rem;
-  }
-  
-  .section-title {
-    font-size: 1.125rem;
-  }
-  
-  .thumbnail-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  
-  .responsibles-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
