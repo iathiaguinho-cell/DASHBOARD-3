@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard Oficina - Gestão de Pátio</title>
+  
+  <!-- Adições para PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
@@ -24,7 +29,7 @@
   <div id="app" class="hidden">
     <header class="bg-white shadow-md sticky top-0 z-40">
       <div id="attention-panel-container">
-        <div id="attention-panel" class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2"></div>
+        <div id="attention-panel" class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2"></div>
       </div>
       <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div class="flex items-center gap-3">
@@ -135,7 +140,6 @@
                     <div id="responsible-delivery">N/D</div>
                 </div>
             </div>
-            <!-- Elemento para exibir as observações iniciais -->
             <div id="detailsObservacoes" class="hidden mt-4 pt-4 border-t border-gray-200">
                 <!-- Conteúdo injetado pelo JS -->
             </div>
@@ -178,7 +182,8 @@
                                 <i class='bx bxs-image-add'></i> Galeria
                             </button>
                         </div>
-                      <input id="media-input" type="file" class="hidden" multiple accept="image/*,video/*">
+                      <!-- ATUALIZAÇÃO PARA ACEITAR PDF -->
+                      <input id="media-input" type="file" class="hidden" multiple accept="image/*,video/*,application/pdf">
                       <p id="fileName" class="text-sm text-gray-500 mt-1 truncate"></p>
                     </div>
                     <button type="submit" class="w-full btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 flex items-center justify-center gap-2">
@@ -232,6 +237,18 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- Script para registrar o Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/DASHBOARD-3/sw.js').then(registration => {
+          console.log('ServiceWorker registrado com sucesso: ', registration.scope);
+        }, err => {
+          console.log('Falha no registro do ServiceWorker: ', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
-
