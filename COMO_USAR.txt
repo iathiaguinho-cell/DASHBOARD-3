@@ -1,0 +1,71 @@
+🚀 DASHBOARD OFICINA CHEVRON - COMO USAR
+=============================================
+
+📁 ESTRUTURA DO PROJETO:
+├── index.html              # Arquivo principal - ABRA ESTE ARQUIVO
+├── css/styles.css          # Estilos do sistema
+├── js/app.js              # Lógica do sistema
+├── docs/                  # Documentação completa
+│   ├── MANUAL_USUARIO.md  # Manual detalhado
+│   └── INSTALACAO.md      # Guia de instalação
+└── README.md              # Documentação técnica
+
+🎯 INÍCIO RÁPIDO:
+1. Extraia todos os arquivos em uma pasta
+2. Abra o arquivo "index.html" em um navegador moderno
+3. Selecione seu usuário na tela inicial
+4. Pronto! O sistema está funcionando
+
+👥 USUÁRIOS DISPONÍVEIS:
+- Augusto (Gestor)
+- William Barbosa (Atendente)
+- Thiago Ventura Valencio (Atendente)
+- Fernando (Mecânico)
+- Gustavo (Mecânico)
+- Marcelo (Mecânico)
+
+🔧 FUNCIONALIDADES PRINCIPAIS:
+✅ Gestão completa de Ordens de Serviço
+✅ Sistema Kanban com 8 status
+✅ Painel de alertas em tempo real
+✅ Upload de fotos e vídeos
+✅ Histórico completo de ações
+✅ Interface responsiva (mobile/desktop)
+✅ Sistema de usuários por perfil
+
+📱 COMPATIBILIDADE:
+- Chrome 80+ (Recomendado)
+- Firefox 75+
+- Safari 13+
+- Edge 80+
+- Funciona em celular e tablet
+
+🌐 HOSPEDAGEM ONLINE:
+Para usar online, hospede em:
+- GitHub Pages (gratuito)
+- Netlify (recomendado)
+- Vercel
+- Qualquer servidor web
+
+📚 DOCUMENTAÇÃO COMPLETA:
+- README.md: Informações técnicas
+- docs/MANUAL_USUARIO.md: Como usar o sistema
+- docs/INSTALACAO.md: Instalação e configuração
+
+🆘 SUPORTE:
+- Consulte a documentação primeiro
+- Verifique se está usando navegador atualizado
+- Teste em modo incógnito se houver problemas
+
+💡 DICA IMPORTANTE:
+O sistema já vem configurado e pronto para uso!
+Não precisa instalar nada, apenas abrir o index.html
+
+🔒 DADOS:
+- Salvos automaticamente no Firebase
+- Backup disponível via console Firebase
+- Acesso em tempo real para toda equipe
+
+Desenvolvido especificamente para CHEVRON Bosch Car Service
+Versão 2.0 - Dezembro 2024
+
