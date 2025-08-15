@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let lightboxMedia = [];
   let currentLightboxIndex = 0;
   let filesToUpload = null;
+  let appStartTime = Date.now();
   
   const USERS = [
     { name: 'Augusto', role: 'Gestor' }, 
@@ -73,14 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
     'Servico-Autorizado', 'Em-Execucao', 'Finalizado-Aguardando-Retirada', 'Entregue'
   ];
   
-  // START OF ALERT LOGIC CHANGE
   const ATTENTION_STATUSES = {
-    'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow' },
-    'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green' },
-    'Finalizado-Aguardando-Retirada': { label: 'FINALIZADO / RETIRADA', color: 'orange', blinkClass: 'blinking-finalizado' }
+    'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow', blinkClass: 'blinking-aguardando' },
+    'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green', blinkClass: 'blinking-autorizado' }
   };
   const LED_TRIGGER_STATUSES = ['Aguardando-Mecanico', 'Servico-Autorizado'];
-  // END OF ALERT LOGIC CHANGE
   
   const userScreen = document.getElementById('userScreen');
   const app = document.getElementById('app');
@@ -106,19 +104,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatStatus = (status) => status.replace(/-/g, ' ');
   
   const updateAttentionPanel = () => {
-    // START OF ALERT LOGIC CHANGE
     let vehiclesTriggeringAlert = new Set();
     Object.values(allServiceOrders).forEach(os => {
         if (LED_TRIGGER_STATUSES.includes(os.status)) {
             vehiclesTriggeringAlert.add(os.id);
         }
     });
-    // END OF ALERT LOGIC CHANGE
 
     attentionPanel.innerHTML = Object.entries(ATTENTION_STATUSES).map(([statusKey, config]) => {
         const vehiclesInStatus = Object.values(allServiceOrders).filter(os => os.status === statusKey);
         const hasVehicles = vehiclesInStatus.length > 0;
-        const blinkingClass = (hasVehicles && config.blinkClass) ? config.blinkClass : '';
+        const blinkingClass = (hasVehicles && config.blinkClass && !attentionPanelContainer.classList.contains('collapsed')) ? config.blinkClass : '';
         const vehicleListHTML = hasVehicles 
             ? vehiclesInStatus.map(os => `<p class="cursor-pointer attention-vehicle text-white hover:text-blue-300" data-os-id="${os.id}">${os.placa} - ${os.modelo}</p>`).join('')
             : `<p class="text-gray-400">- Vazio -</p>`;
@@ -141,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     userScreen.classList.add('hidden');
     app.classList.remove('hidden');
     listenToServiceOrders();
+    listenToNotifications();
   };
   
   const checkLoggedInUser = () => {
@@ -260,6 +257,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
   
+  function sendTeamNotification(message) {
+      if (!currentUser) return;
+      const notificationRef = db.ref('notifications').push();
+      notificationRef.set({
+          message: message,
+          user: currentUser.name,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+  }
+
+  function listenToNotifications() {
+      const notificationsRef = db.ref('notifications').orderByChild('timestamp').startAt(appStartTime);
+      notificationsRef.on('child_added', snapshot => {
+          const notification = snapshot.val();
+          if (notification && notification.user !== currentUser.name) {
+              showNotification(notification.message, 'success');
+          }
+          snapshot.ref.remove();
+      });
+  }
+  
   const updateLedState = (vehiclesTriggeringAlert) => {
     if (vehiclesTriggeringAlert.size > 0 && attentionPanelContainer.classList.contains('collapsed')) {
         alertLed.classList.remove('hidden');
@@ -283,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     db.ref(`serviceOrders/${osId}`).update(updates);
     
-    showNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)}`);
+    sendTeamNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)} por ${currentUser.name}`);
   };
   
   const openDetailsModal = (osId) => {
@@ -361,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
     
-    if (logs.length === 0) {
+    if (Object.keys(logs).length === 0) {
       timelineContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum registro encontrado.</p>';
     }
   };
@@ -374,9 +392,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     thumbnailGrid.innerHTML = lightboxMedia.map((item, index) => {
         const isImage = item.type.startsWith('image/');
+        const isVideo = item.type.startsWith('video/');
+        const isPdf = item.type === 'application/pdf';
+
+        let thumbnailContent = `<i class='bx bx-file text-4xl text-gray-500'></i>`; // Ícone padrão
+        if (isImage) {
+            thumbnailContent = `<img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy" class="w-full h-full object-cover">`;
+        } else if (isVideo) {
+            thumbnailContent = `<i class='bx bx-play-circle text-4xl text-blue-500'></i>`;
+        } else if (isPdf) {
+            thumbnailContent = `<i class='bx bxs-file-pdf text-4xl text-red-500'></i>`;
+        }
+
         return `
           <div class="aspect-square bg-gray-200 rounded-md overflow-hidden cursor-pointer thumbnail-item flex items-center justify-center" data-index="${index}">
-            ${isImage ? `<img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy" class="w-full h-full object-cover">` : `<i class='bx bx-play-circle text-4xl text-blue-500'></i>`}
+            ${thumbnailContent}
           </div>
         `;
     }).join('');
@@ -399,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
           body: formData,
       });
       if (!response.ok) {
-          throw new Error(`Erro no upload: ${response.statusText}`);
+          throw new Error(`Erro no upload da imagem: ${response.statusText}`);
       }
       const data = await response.json();
       if (data.success) {
@@ -408,14 +438,42 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(data.error.message || 'Falha ao obter URL da imagem.');
       }
   };
+
+  const uploadToGofile = async (file) => {
+      // 1. Obter o melhor servidor para upload
+      const serverResponse = await fetch(`https://api.gofile.io/getServer`);
+      if (!serverResponse.ok) throw new Error('Não foi possível conectar ao servidor de arquivos.');
+      const serverData = await serverResponse.json();
+      if (serverData.status !== 'ok') throw new Error('Servidor de arquivos indisponível.');
+      const server = serverData.data.server;
+
+      // 2. Fazer o upload do arquivo
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadResponse = await fetch(`https://${server}.gofile.io/uploadFile`, {
+          method: 'POST',
+          body: formData,
+      });
+      if (!uploadResponse.ok) throw new Error('Erro durante o upload do PDF.');
+      const uploadData = await uploadResponse.json();
+      if (uploadData.status !== 'ok') throw new Error('Falha ao processar o PDF no servidor.');
+      
+      return uploadData.data.downloadPage; // Retorna o link para a página de download
+  };
   
   const openLightbox = (index) => {
     if (!lightboxMedia || lightboxMedia.length === 0) return;
     
     currentLightboxIndex = index;
     const media = lightboxMedia[index];
-    const lightboxContent = document.getElementById('lightbox-content');
+
+    // Se for PDF, abre em nova aba e não mostra o lightbox
+    if (media.type === 'application/pdf') {
+        window.open(media.url, '_blank');
+        return;
+    }
     
+    const lightboxContent = document.getElementById('lightbox-content');
     const isImage = media.type.startsWith('image/');
     if (isImage) {
       lightboxContent.innerHTML = `<img src="${media.url}" alt="Imagem" class="max-w-full max-h-full object-contain">`;
@@ -540,11 +598,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (osId) {
       db.ref(`serviceOrders/${osId}`).update(osData);
-      showNotification('O.S. atualizada com sucesso!');
+      sendTeamNotification(`O.S. ${osData.placa} foi atualizada por ${currentUser.name}`);
     } else {
       const newOsRef = db.ref('serviceOrders').push();
       newOsRef.set(osData);
-      showNotification('Nova O.S. criada com sucesso!');
+      sendTeamNotification(`Nova O.S. para ${osData.placa} criada por ${currentUser.name}`);
     }
     
     osModal.classList.add('hidden');
@@ -573,13 +631,15 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         if (filesToUpload && filesToUpload.length > 0) {
             submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Enviando mídia...`;
-            const mediaPromises = Array.from(filesToUpload).map(file => 
-                uploadToImgBB(file).then(url => ({
-                    type: file.type,
-                    url: url,
-                    timestamp: new Date().toISOString()
-                }))
-            );
+            
+            const mediaPromises = Array.from(filesToUpload).map(file => {
+                if (file.type === 'application/pdf') {
+                    return uploadToGofile(file).then(url => ({ type: file.type, url: url, timestamp: new Date().toISOString() }));
+                } else {
+                    return uploadToImgBB(file).then(url => ({ type: file.type, url: url, timestamp: new Date().toISOString() }));
+                }
+            });
+
             const mediaResults = await Promise.all(mediaPromises);
             const mediaRef = db.ref(`serviceOrders/${osId}/media`);
             const snapshot = await mediaRef.once('value');
@@ -596,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filesToUpload = null;
         document.getElementById('fileName').textContent = '';
         postLogActions.style.display = 'flex';
-        showNotification('Registro adicionado com sucesso!');
+        sendTeamNotification(`Novo registro adicionado à O.S. ${allServiceOrders[osId].placa} por ${currentUser.name}`);
 
     } catch (error) {
         console.error("Erro ao salvar registro:", error);
@@ -644,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (newKm && newKm > 0) {
       db.ref(`serviceOrders/${osId}/km`).set(newKm);
       document.getElementById('updateKmInput').value = '';
-      showNotification('KM atualizada com sucesso!');
+      sendTeamNotification(`KM da O.S. ${allServiceOrders[osId].placa} atualizado para ${newKm} por ${currentUser.name}`);
     }
   });
   
@@ -655,16 +715,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (confirm(`Tem certeza que deseja excluir a O.S. ${os.placa}?`)) {
       db.ref(`serviceOrders/${osId}`).remove();
       detailsModal.classList.add('hidden');
-      showNotification('O.S. excluída com sucesso!');
+      sendTeamNotification(`O.S. ${os.placa} foi excluída por ${currentUser.name}`);
     }
   });
   
   openCameraBtn.addEventListener('click', () => {
+    mediaInput.setAttribute('accept', 'image/*,video/*');
     mediaInput.setAttribute('capture', 'camera');
     mediaInput.click();
   });
   
   openGalleryBtn.addEventListener('click', () => {
+    mediaInput.setAttribute('accept', 'image/*,video/*,application/pdf');
     mediaInput.removeAttribute('capture');
     mediaInput.click();
   });
@@ -715,4 +777,3 @@ document.addEventListener('DOMContentLoaded', () => {
   
   checkLoggedInUser();
 });
-
