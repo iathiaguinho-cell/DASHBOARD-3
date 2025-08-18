@@ -207,7 +207,8 @@
                   </form>
               </div>
               <div class="bg-white rounded-lg shadow p-4">
-                  <button id="deleteOsBtn" class="w-full btn bg-red-600 hover:bg-red-700 text-white">
+                  <!-- O botão agora começa escondido e será exibido via JS se o usuário tiver permissão -->
+                  <button id="deleteOsBtn" class="w-full btn bg-red-600 hover:bg-red-700 text-white hidden">
                     <i class='bx bx-trash'></i> Excluir O.S.
                   </button>
               </div>
@@ -230,8 +231,25 @@
             <a id="lightbox-download" href="#" download class="bg-blue-600 text-white p-2 rounded-full"><i class='bx bxs-download'></i></a>
             <button id="lightbox-copy" class="bg-blue-600 text-white p-2 rounded-full"><i class='bx bx-copy'></i></button>
         </div>
+    </div>
   </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+  <div id="confirmDeleteModal" class="modal fixed inset-0 z-[101] hidden items-center justify-center p-4">
+    <div class="modal-content w-full max-w-md">
+        <div class="modal-header">
+            <h2 class="text-xl font-bold text-red-600 flex items-center gap-2"><i class='bx bxs-error-circle'></i>Confirmar Exclusão</h2>
+        </div>
+        <div class="modal-body">
+            <p id="confirmDeleteText" class="text-gray-700">Você tem certeza que deseja excluir esta Ordem de Serviço? Esta ação não pode ser desfeita.</p>
+        </div>
+        <div class="modal-footer">
+            <button id="cancelDeleteBtn" class="btn bg-gray-200 hover:bg-gray-300 text-gray-800">Cancelar</button>
+            <button id="confirmDeleteBtn" class="btn bg-red-600 hover:bg-red-700 text-white">Sim, Excluir</button>
+        </div>
+    </div>
   </div>
+
 
   <!-- SCRIPTS -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
