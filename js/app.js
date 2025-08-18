@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const LED_TRIGGER_STATUSES = ['Aguardando-Mecanico', 'Servico-Autorizado'];
   
+  // Elementos da UI
   const userScreen = document.getElementById('userScreen');
   const app = document.getElementById('app');
   const userList = document.getElementById('userList');
@@ -100,6 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const openGalleryBtn = document.getElementById('openGalleryBtn');
   const alertLed = document.getElementById('alert-led');
   const postLogActions = document.getElementById('post-log-actions');
+  const deleteOsBtn = document.getElementById('deleteOsBtn');
+
+  // Elementos do novo Modal de Confirmação de Exclusão
+  const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+  const confirmDeleteText = document.getElementById('confirmDeleteText');
+  const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
   
   const formatStatus = (status) => status.replace(/-/g, ' ');
   
@@ -328,6 +336,13 @@ document.addEventListener('DOMContentLoaded', () => {
       observacoesContainer.classList.add('hidden');
     }
     
+    // Mostra ou esconde o botão de excluir com base no perfil do usuário
+    if (currentUser && (currentUser.role === 'Gestor' || currentUser.role === 'Atendente')) {
+        deleteOsBtn.classList.remove('hidden');
+    } else {
+        deleteOsBtn.classList.add('hidden');
+    }
+
     document.getElementById('logOsId').value = osId;
     logForm.reset();
     document.getElementById('fileName').textContent = '';
@@ -491,6 +506,10 @@ document.addEventListener('DOMContentLoaded', () => {
     lightbox.classList.remove('hidden');
     lightbox.classList.add('flex');
   };
+  
+  // ==================================================================
+  // LISTENERS DE EVENTOS
+  // ==================================================================
   
   userList.addEventListener('click', (e) => {
     const userBtn = e.target.closest('.user-btn');
@@ -708,15 +727,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  document.getElementById('deleteOsBtn').addEventListener('click', () => {
+  // --- LÓGICA DE EXCLUSÃO ATUALIZADA ---
+  deleteOsBtn.addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
     
-    if (confirm(`Tem certeza que deseja excluir a O.S. ${os.placa}?`)) {
+    // Verifica a permissão antes de abrir o modal
+    if (currentUser.role === 'Gestor' || currentUser.role === 'Atendente') {
+      confirmDeleteText.innerHTML = `Você tem certeza que deseja excluir a O.S. da placa <strong>${os.placa}</strong>? <br><br>Esta ação não pode ser desfeita.`;
+      confirmDeleteBtn.dataset.osId = osId; // Armazena o ID da O.S. no botão de confirmação
+      confirmDeleteModal.classList.remove('hidden');
+      confirmDeleteModal.classList.add('flex');
+    } else {
+      showNotification('Você não tem permissão para excluir Ordens de Serviço.', 'error');
+    }
+  });
+
+  // Evento para o botão de confirmação final no novo modal
+  confirmDeleteBtn.addEventListener('click', () => {
+    const osId = confirmDeleteBtn.dataset.osId;
+    if (osId) {
+      const os = allServiceOrders[osId];
       db.ref(`serviceOrders/${osId}`).remove();
       detailsModal.classList.add('hidden');
+      confirmDeleteModal.classList.add('hidden');
+      confirmDeleteModal.classList.remove('flex');
+      showNotification(`O.S. ${os.placa} foi excluída com sucesso.`, 'success');
       sendTeamNotification(`O.S. ${os.placa} foi excluída por ${currentUser.name}`);
     }
+  });
+
+  // Evento para o botão de cancelar no novo modal
+  cancelDeleteBtn.addEventListener('click', () => {
+    confirmDeleteModal.classList.add('hidden');
+    confirmDeleteModal.classList.remove('flex');
+  });
+
+  // Evento para fechar o modal de exclusão ao clicar fora
+  confirmDeleteModal.addEventListener('click', (e) => {
+      if (e.target.id === 'confirmDeleteModal') {
+          confirmDeleteModal.classList.add('hidden');
+          confirmDeleteModal.classList.remove('flex');
+      }
   });
   
   openCameraBtn.addEventListener('click', () => {
