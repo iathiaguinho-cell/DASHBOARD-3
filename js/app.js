@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const db = firebase.database();
   
   let currentUser = null;
-  // O allServiceOrders agora funciona como um cache local para detalhes
   let allServiceOrders = {};
   let lightboxMedia = [];
   let currentLightboxIndex = 0;
@@ -81,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const LED_TRIGGER_STATUSES = ['Aguardando-Mecanico', 'Servico-Autorizado'];
   
-  // Elementos da UI
   const userScreen = document.getElementById('userScreen');
   const app = document.getElementById('app');
   const userList = document.getElementById('userList');
@@ -103,8 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const alertLed = document.getElementById('alert-led');
   const postLogActions = document.getElementById('post-log-actions');
   const deleteOsBtn = document.getElementById('deleteOsBtn');
-
-  // Elementos do Modal de Confirmação de Exclusão
   const confirmDeleteModal = document.getElementById('confirmDeleteModal');
   const confirmDeleteText = document.getElementById('confirmDeleteText');
   const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
@@ -113,18 +109,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatStatus = (status) => status.replace(/-/g, ' ');
   
   // ==================================================================
-  // LÓGICA OTIMIZADA DO KANBAN
+  // LÓGICA OTIMIZADA DO KANBAN COM FILTRO
   // ==================================================================
 
   const initializeKanban = () => {
     const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
     kanbanBoard.innerHTML = STATUS_LIST.map(status => {
       const isCollapsed = collapsedState[status];
-      const hasVehicles = kanbanBoard.querySelector(`.vehicle-list[data-status="${status}"]`)?.children.length > 0;
-      const columnLedHTML = isCollapsed && hasVehicles ? `<div class="column-led ml-2"></div>` : '';
+      const isDeliveredColumn = status === 'Entregue';
       
-      // A busca em "Entregue" foi removida desta versão para simplificar
-      // A implementação correta exigiria paginação e busca no backend.
+      // Adiciona o campo de busca apenas na coluna "Entregue"
+      const searchInputHTML = isDeliveredColumn ? `
+        <div class="my-2">
+          <input type="search" id="searchDeliveredInput" placeholder="Buscar por Placa..." 
+                 class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      ` : '';
+      
+      const columnLedHTML = isCollapsed ? `<div class="column-led ml-2"></div>` : '';
+      
       return `
         <div class="status-column p-4">
           <div class="flex justify-between items-center cursor-pointer toggle-column-btn mb-2" data-status="${status}">
@@ -134,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <i class='bx bxs-chevron-down transition-transform ${isCollapsed ? 'rotate-180' : ''}'></i>
           </div>
+          ${searchInputHTML}
           <div class="space-y-3 vehicle-list ${isCollapsed ? 'collapsed' : ''}" data-status="${status}"></div>
         </div>`;
     }).join('');
@@ -164,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const kmInfo = `<p class="text-xs text-gray-500">KM: ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}</p>`;
     
-    // O ID do card agora é o ID da O.S. para fácil manipulação do DOM
     return `
       <div id="${os.id}" class="vehicle-card status-${os.status}" data-os-id="${os.id}">
         <div class="flex justify-between items-start">
@@ -182,48 +185,90 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
   };
 
+  // Nova função dedicada para renderizar a coluna "Entregue"
+  const renderDeliveredColumn = () => {
+      const list = kanbanBoard.querySelector('.vehicle-list[data-status="Entregue"]');
+      if (!list) return;
+
+      const searchInput = document.getElementById('searchDeliveredInput');
+      const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
+      
+      // Filtra todas as O.S. do cache que estão com status "Entregue"
+      let deliveredItems = Object.values(allServiceOrders).filter(os => os.status === 'Entregue');
+
+      // Se houver um termo de busca, aplica o filtro por placa
+      if (searchTerm) {
+          deliveredItems = deliveredItems.filter(os => os.placa.toUpperCase().includes(searchTerm));
+      }
+
+      // Ordena por data de criação, do mais recente para o mais antigo
+      deliveredItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      // Limpa a coluna e a preenche com os itens filtrados
+      list.innerHTML = deliveredItems.map(os => createCardHTML(os)).join('');
+  };
+
   const listenToServiceOrdersOptimized = () => {
     const osRef = db.ref('serviceOrders');
 
-    // Evento para quando uma O.S. é ADICIONADA
     osRef.on('child_added', snapshot => {
       const os = { ...snapshot.val(), id: snapshot.key };
-      allServiceOrders[os.id] = os; // Adiciona ao cache local
-      const list = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
-      if (list) {
-        list.insertAdjacentHTML('beforeend', createCardHTML(os));
+      allServiceOrders[os.id] = os; 
+      
+      if (os.status === 'Entregue') {
+        renderDeliveredColumn(); // Renderiza a coluna de entregues para aplicar o filtro
+      } else {
+        const list = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
+        if (list) {
+          list.insertAdjacentHTML('beforeend', createCardHTML(os));
+        }
       }
       updateAttentionPanel();
     });
 
-    // Evento para quando uma O.S. é ALTERADA
     osRef.on('child_changed', snapshot => {
       const os = { ...snapshot.val(), id: snapshot.key };
       const oldOs = allServiceOrders[os.id];
-      allServiceOrders[os.id] = os; // Atualiza o cache
+      allServiceOrders[os.id] = os; 
 
       const existingCard = document.getElementById(os.id);
-
-      // Se o status mudou, move o card
+      
+      // Se o status mudou
       if (oldOs && oldOs.status !== os.status) {
         if (existingCard) existingCard.remove();
-        const newList = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
-        if (newList) newList.insertAdjacentHTML('beforeend', createCardHTML(os));
+        
+        if (os.status === 'Entregue') {
+          renderDeliveredColumn();
+        } else {
+          const newList = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
+          if (newList) newList.insertAdjacentHTML('beforeend', createCardHTML(os));
+        }
+        // Se a O.S. saiu do status "Entregue", a coluna precisa ser re-renderizada sem ela
+        if(oldOs.status === 'Entregue') {
+            renderDeliveredColumn();
+        }
       } 
-      // Se o status não mudou, apenas atualiza o card existente
+      // Se o status não mudou, apenas atualiza o card
       else if (existingCard) {
-        existingCard.outerHTML = createCardHTML(os);
+        if (os.status === 'Entregue') {
+            renderDeliveredColumn();
+        } else {
+            existingCard.outerHTML = createCardHTML(os);
+        }
       }
       updateAttentionPanel();
     });
 
-    // Evento para quando uma O.S. é REMOVIDA
     osRef.on('child_removed', snapshot => {
       const osId = snapshot.key;
-      delete allServiceOrders[osId]; // Remove do cache
-      const cardToRemove = document.getElementById(osId);
-      if (cardToRemove) {
-        cardToRemove.remove();
+      const removedOs = allServiceOrders[osId];
+      delete allServiceOrders[osId];
+      
+      if (removedOs && removedOs.status === 'Entregue') {
+          renderDeliveredColumn();
+      } else {
+          const cardToRemove = document.getElementById(osId);
+          if (cardToRemove) cardToRemove.remove();
       }
       updateAttentionPanel();
     });
@@ -263,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
     userScreen.classList.add('hidden');
     app.classList.remove('hidden');
     
-    // Inicializa o quadro e depois começa a escutar as mudanças
     initializeKanban();
     listenToServiceOrdersOptimized(); 
     listenToNotifications();
@@ -329,7 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   
   const openDetailsModal = (osId) => {
-    // Busca os dados mais recentes do cache local
     const os = allServiceOrders[osId];
     if (!os) {
         showNotification("Não foi possível carregar os detalhes desta O.S.", "error");
@@ -524,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   
   // ==================================================================
-  // LISTENERS DE EVENTOS (A MAIORIA PERMANECE IGUAL)
+  // LISTENERS DE EVENTOS
   // ==================================================================
   
   userList.addEventListener('click', (e) => {
@@ -537,7 +580,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   logoutButton.addEventListener('click', () => {
     localStorage.removeItem('currentUser');
-    // Desconecta dos listeners do Firebase para evitar erros e consumo de dados
     db.ref('serviceOrders').off();
     db.ref('notifications').off();
     location.reload();
@@ -584,10 +626,16 @@ document.addEventListener('DOMContentLoaded', () => {
       collapsedState[status] = vehicleList.classList.contains('collapsed');
       localStorage.setItem('collapsedColumns', JSON.stringify(collapsedState));
       
-      // Apenas atualiza o LED, não precisa redesenhar tudo
       const columnLed = toggleBtn.querySelector('.column-led');
-      if (columnLed) columnLed.style.display = collapsedState[status] ? 'block' : 'none';
+      if (columnLed) columnLed.style.display = (collapsedState[status] && vehicleList.children.length > 0) ? 'block' : 'none';
     }
+  });
+
+  // Event listener para o input de busca
+  kanbanBoard.addEventListener('input', (e) => {
+      if (e.target.id === 'searchDeliveredInput') {
+          renderDeliveredColumn();
+      }
   });
   
   document.addEventListener('click', (e) => {
