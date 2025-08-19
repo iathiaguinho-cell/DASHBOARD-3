@@ -345,11 +345,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
+  // MODIFICAÇÃO: Função agora registra a mudança de status no histórico
   const updateServiceOrderStatus = async (osId, newStatus) => {
     const os = allServiceOrders[osId];
     if (!os) return;
     const oldStatus = os.status;
 
+    // Prepara o registro de log ANTES de qualquer outra coisa
     const logEntry = {
         timestamp: new Date().toISOString(),
         user: currentUser.name,
@@ -357,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         type: 'status'
     };
 
+    // Prepara as atualizações principais da O.S.
     const updates = { 
       status: newStatus, 
       lastUpdate: new Date().toISOString() 
@@ -367,10 +370,12 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (newStatus === 'Entregue') updates.responsibleForDelivery = currentUser.name;
     
     try {
+        // Salva o novo log no histórico
         const logsRef = db.ref(`serviceOrders/${osId}/logs`);
         const newLogRef = logsRef.push();
         await newLogRef.set(logEntry);
 
+        // Atualiza o status da O.S.
         await db.ref(`serviceOrders/${osId}`).update(updates);
         
         sendTeamNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)} por ${currentUser.name}`);
@@ -939,6 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
     postLogActions.style.display = 'none';
   });
   
+  // MODIFICAÇÃO: Adiciona o log de KM ao submeter o formulário
   kmUpdateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -946,8 +952,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const newKm = parseInt(document.getElementById('updateKmInput').value);
     
     if (newKm && newKm > 0) {
+      // Atualiza o KM na raiz da O.S.
       await db.ref(`serviceOrders/${osId}/km`).set(newKm);
 
+      // Cria e salva o registro no histórico
       const logEntry = {
         timestamp: new Date().toISOString(),
         user: currentUser.name,
@@ -1003,10 +1011,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   });
   
+  // MODIFICAÇÃO: Garante que o input da câmera permita múltiplos arquivos
   openCameraBtn.addEventListener('click', () => {
-    mediaInput.setAttribute('accept', 'image/*');
+    mediaInput.setAttribute('accept', 'image/*'); // Apenas imagens para a câmera
     mediaInput.setAttribute('capture', 'camera');
-    mediaInput.multiple = true;
+    mediaInput.multiple = true; // Força o atributo para múltiplos arquivos
     mediaInput.click();
   });
   
