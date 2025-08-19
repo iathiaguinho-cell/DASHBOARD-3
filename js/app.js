@@ -345,10 +345,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  const updateServiceOrderStatus = (osId, newStatus) => {
+  const updateServiceOrderStatus = async (osId, newStatus) => {
     const os = allServiceOrders[osId];
     if (!os) return;
-    
+    const oldStatus = os.status;
+
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        user: currentUser.name,
+        description: `Status alterado de "${formatStatus(oldStatus)}" para "${formatStatus(newStatus)}".`,
+        type: 'status'
+    };
+
     const updates = { 
       status: newStatus, 
       lastUpdate: new Date().toISOString() 
@@ -358,9 +366,18 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (newStatus === 'Em-Execucao') updates.responsibleForService = currentUser.name;
     else if (newStatus === 'Entregue') updates.responsibleForDelivery = currentUser.name;
     
-    db.ref(`serviceOrders/${osId}`).update(updates);
-    
-    sendTeamNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)} por ${currentUser.name}`);
+    try {
+        const logsRef = db.ref(`serviceOrders/${osId}/logs`);
+        const newLogRef = logsRef.push();
+        await newLogRef.set(logEntry);
+
+        await db.ref(`serviceOrders/${osId}`).update(updates);
+        
+        sendTeamNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)} por ${currentUser.name}`);
+    } catch (error) {
+        console.error("Erro ao atualizar status e registrar log:", error);
+        showNotification("Falha ao mover O.S. Tente novamente.", "error");
+    }
   };
   
   const openDetailsModal = (osId) => {
@@ -371,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     document.getElementById('detailsPlacaModelo').textContent = `${os.placa} - ${os.modelo}`;
-    document.getElementById('detailsCliente').textContent = `Cliente: ${os.cliente}`;
+    document.getElementById('detailsCliente').innerHTML = `Cliente: ${os.cliente} <br> <span class="text-sm text-gray-500">Telefone: ${os.telefone || 'Não informado'}</span>`;
     document.getElementById('detailsKm').textContent = `KM: ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}`;
     
     document.getElementById('responsible-attendant').textContent = os.responsible || 'N/D';
@@ -489,9 +506,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  // ==================================================================
-  // NOVA FUNÇÃO PARA EXPORTAR/IMPRIMIR O.S.
-  // ==================================================================
   const exportOsToPrint = (osId) => {
     const os = allServiceOrders[osId];
     if (!os) {
@@ -522,6 +536,17 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }).join('');
 
+    const media = os.media ? Object.values(os.media) : [];
+    const photos = media.filter(item => item.type.startsWith('image/'));
+    const photosHtml = photos.length > 0 ? `
+        <div class="section">
+            <h2>Fotos Anexadas</h2>
+            <div class="photo-gallery">
+                ${photos.map(photo => `<img src="${photo.url}" alt="Foto da O.S.">`).join('')}
+            </div>
+        </div>
+    ` : '';
+
     const printHtml = `
       <html>
         <head>
@@ -532,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .header h1 { margin: 0; font-size: 24px; }
             .header p { margin: 5px 0; }
-            .section { margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; padding: 15px; }
+            .section { margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; padding: 15px; page-break-inside: avoid; }
             .section h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
             .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .grid-item strong { display: block; color: #555; }
@@ -544,6 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .signature { margin-top: 60px; }
             .signature-line { border-bottom: 1px solid #000; width: 300px; margin: 0 auto; }
             .signature p { margin-top: 5px; font-size: 14px; }
+            .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+            .photo-gallery img { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
             @media print {
               body { padding: 10px; }
               .no-print { display: none; }
@@ -597,6 +624,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 Total: R$ ${totalValue.toFixed(2)}
               </div>
             </div>
+            
+            ${photosHtml}
 
             <div class="footer">
               <div class="signature">
@@ -769,7 +798,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Listener de clique para o modal de detalhes, incluindo o novo botão de exportar
   detailsModal.addEventListener('click', (e) => {
     const exportBtn = e.target.closest('#exportOsBtn');
     if (exportBtn) {
@@ -865,9 +893,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const logsRef = db.ref(`serviceOrders/${osId}/logs`);
-        const snapshot = await logsRef.once('value');
-        const currentLogs = snapshot.val() || [];
-        await logsRef.set([...currentLogs, logEntry]);
+        const newLogRef = logsRef.push();
+        await newLogRef.set(logEntry);
 
         logForm.reset();
         filesToUpload = null;
@@ -912,15 +939,27 @@ document.addEventListener('DOMContentLoaded', () => {
     postLogActions.style.display = 'none';
   });
   
-  kmUpdateForm.addEventListener('submit', (e) => {
+  kmUpdateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const osId = document.getElementById('logOsId').value;
     const newKm = parseInt(document.getElementById('updateKmInput').value);
     
     if (newKm && newKm > 0) {
-      db.ref(`serviceOrders/${osId}/km`).set(newKm);
+      await db.ref(`serviceOrders/${osId}/km`).set(newKm);
+
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        user: currentUser.name,
+        description: `KM do veículo atualizado para ${new Intl.NumberFormat('pt-BR').format(newKm)} km.`,
+        type: 'log'
+      };
+      const logsRef = db.ref(`serviceOrders/${osId}/logs`);
+      const newLogRef = logsRef.push();
+      await newLogRef.set(logEntry);
+
       document.getElementById('updateKmInput').value = '';
+      showNotification('KM atualizado e registrado no histórico!', 'success');
       sendTeamNotification(`KM da O.S. ${allServiceOrders[osId].placa} atualizado para ${newKm} por ${currentUser.name}`);
     }
   });
@@ -965,14 +1004,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   openCameraBtn.addEventListener('click', () => {
-    mediaInput.setAttribute('accept', 'image/*,video/*');
+    mediaInput.setAttribute('accept', 'image/*');
     mediaInput.setAttribute('capture', 'camera');
+    mediaInput.multiple = true;
     mediaInput.click();
   });
   
   openGalleryBtn.addEventListener('click', () => {
     mediaInput.setAttribute('accept', 'image/*,video/*,application/pdf');
     mediaInput.removeAttribute('capture');
+    mediaInput.multiple = true;
     mediaInput.click();
   });
   
