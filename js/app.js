@@ -118,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const isCollapsed = collapsedState[status];
       const isDeliveredColumn = status === 'Entregue';
       
-      // Adiciona o campo de busca apenas na coluna "Entregue"
       const searchInputHTML = isDeliveredColumn ? `
         <div class="my-2">
           <input type="search" id="searchDeliveredInput" placeholder="Buscar por Placa..." 
@@ -185,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
   };
 
-  // Nova função dedicada para renderizar a coluna "Entregue"
   const renderDeliveredColumn = () => {
       const list = kanbanBoard.querySelector('.vehicle-list[data-status="Entregue"]');
       if (!list) return;
@@ -193,18 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const searchInput = document.getElementById('searchDeliveredInput');
       const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
       
-      // Filtra todas as O.S. do cache que estão com status "Entregue"
       let deliveredItems = Object.values(allServiceOrders).filter(os => os.status === 'Entregue');
 
-      // Se houver um termo de busca, aplica o filtro por placa
       if (searchTerm) {
           deliveredItems = deliveredItems.filter(os => os.placa.toUpperCase().includes(searchTerm));
       }
 
-      // Ordena por data de criação, do mais recente para o mais antigo
       deliveredItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-      // Limpa a coluna e a preenche com os itens filtrados
       list.innerHTML = deliveredItems.map(os => createCardHTML(os)).join('');
   };
 
@@ -216,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
       allServiceOrders[os.id] = os; 
       
       if (os.status === 'Entregue') {
-        renderDeliveredColumn(); // Renderiza a coluna de entregues para aplicar o filtro
+        renderDeliveredColumn();
       } else {
         const list = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
         if (list) {
@@ -233,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const existingCard = document.getElementById(os.id);
       
-      // Se o status mudou
       if (oldOs && oldOs.status !== os.status) {
         if (existingCard) existingCard.remove();
         
@@ -243,12 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const newList = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
           if (newList) newList.insertAdjacentHTML('beforeend', createCardHTML(os));
         }
-        // Se a O.S. saiu do status "Entregue", a coluna precisa ser re-renderizada sem ela
         if(oldOs.status === 'Entregue') {
             renderDeliveredColumn();
         }
       } 
-      // Se o status não mudou, apenas atualiza o card
       else if (existingCard) {
         if (os.status === 'Entregue') {
             renderDeliveredColumn();
@@ -498,6 +489,138 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
+  // ==================================================================
+  // NOVA FUNÇÃO PARA EXPORTAR/IMPRIMIR O.S.
+  // ==================================================================
+  const exportOsToPrint = (osId) => {
+    const os = allServiceOrders[osId];
+    if (!os) {
+      showNotification('Dados da O.S. não encontrados.', 'error');
+      return;
+    }
+
+    const formatDate = (isoString) => {
+        if (!isoString) return 'N/A';
+        const date = new Date(isoString);
+        return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    };
+
+    const logs = os.logs ? Object.values(os.logs).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)) : [];
+    let totalValue = 0;
+    const timelineHtml = logs.map(log => {
+        if (log.value) {
+            totalValue += parseFloat(log.value);
+        }
+        return `
+            <tr>
+                <td>${formatDate(log.timestamp)}</td>
+                <td>${log.user}</td>
+                <td>${log.description}</td>
+                <td>${log.parts || '---'}</td>
+                <td style="text-align: right;">${log.value ? `R$ ${parseFloat(log.value).toFixed(2)}` : '---'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const printHtml = `
+      <html>
+        <head>
+          <title>Ordem de Serviço - ${os.placa}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 800px; margin: auto; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .header p { margin: 5px 0; }
+            .section { margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; padding: 15px; }
+            .section h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .grid-item strong { display: block; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+            th { background-color: #f2f2f2; }
+            .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 20px; }
+            .footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; }
+            .signature { margin-top: 60px; }
+            .signature-line { border-bottom: 1px solid #000; width: 300px; margin: 0 auto; }
+            .signature p { margin-top: 5px; font-size: 14px; }
+            @media print {
+              body { padding: 10px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>CHEVRON Bosch Car Service</h1>
+              <p>Ordem de Serviço</p>
+            </div>
+
+            <div class="section">
+              <h2>Detalhes da O.S.</h2>
+              <div class="grid">
+                <div class="grid-item"><strong>Placa:</strong> ${os.placa}</div>
+                <div class="grid-item"><strong>Modelo:</strong> ${os.modelo}</div>
+                <div class="grid-item"><strong>Cliente:</strong> ${os.cliente}</div>
+                <div class="grid-item"><strong>Telefone:</strong> ${os.telefone || 'N/A'}</div>
+                <div class="grid-item"><strong>KM:</strong> ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}</div>
+                <div class="grid-item"><strong>Data de Abertura:</strong> ${formatDate(os.createdAt)}</div>
+                <div class="grid-item"><strong>Atendente:</strong> ${os.responsible || 'N/A'}</div>
+              </div>
+            </div>
+
+            ${os.observacoes ? `
+            <div class="section">
+                <h2>Queixa do Cliente / Observações Iniciais</h2>
+                <p style="white-space: pre-wrap;">${os.observacoes}</p>
+            </div>
+            ` : ''}
+
+            <div class="section">
+              <h2>Histórico de Serviços e Peças</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Usuário</th>
+                    <th>Descrição</th>
+                    <th>Peças</th>
+                    <th style="text-align: right;">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${timelineHtml || '<tr><td colspan="5" style="text-align: center;">Nenhum registro no histórico.</td></tr>'}
+                </tbody>
+              </table>
+              <div class="total">
+                Total: R$ ${totalValue.toFixed(2)}
+              </div>
+            </div>
+
+            <div class="footer">
+              <div class="signature">
+                <div class="signature-line"></div>
+                <p>Assinatura do Cliente</p>
+              </div>
+              <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 100);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+  };
+  
   const uploadToImgBB = async (file) => {
       const formData = new FormData();
       formData.append('image', file);
@@ -631,7 +754,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Event listener para o input de busca
   kanbanBoard.addEventListener('input', (e) => {
       if (e.target.id === 'searchDeliveredInput') {
           renderDeliveredColumn();
@@ -644,6 +766,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
      if (e.target.closest('.btn-close-modal') || e.target.id === 'osModal') {
       osModal.classList.add('hidden');
+    }
+  });
+
+  // Listener de clique para o modal de detalhes, incluindo o novo botão de exportar
+  detailsModal.addEventListener('click', (e) => {
+    const exportBtn = e.target.closest('#exportOsBtn');
+    if (exportBtn) {
+        const osId = document.getElementById('logOsId').value;
+        if (osId) {
+            exportOsToPrint(osId);
+        }
     }
   });
   
