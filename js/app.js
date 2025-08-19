@@ -422,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTimeline(os);
     renderMediaGallery(os);
     
-    // MODIFICAÇÃO: Adiciona a assinatura dinamicamente ao modal
     const existingSignature = detailsModal.querySelector('.dev-signature-modal');
     if (existingSignature) {
         existingSignature.remove();
@@ -431,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (actionsSection) {
         const signatureDiv = document.createElement('div');
         signatureDiv.className = 'dev-signature-modal text-center text-xs text-gray-500 mt-4 px-4';
-        signatureDiv.innerHTML = `<p>Desenvolvido com 🤖 por <strong>thIAguinho Soluções</strong></p>`;
+        signatureDiv.innerHTML = `<p>Desenvolvido com 🚀 por <strong>thIAguinho Soluções</strong></p>`;
         actionsSection.appendChild(signatureDiv);
     }
     
@@ -649,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
               <div class="dev-signature">
-                <p>Desenvolvido com 🤖 por <strong>thIAguinho Soluções</strong></p>
+                <p>Desenvolvido com 🚀 por <strong>thIAguinho Soluções</strong></p>
               </div>
             </div>
           </div>
