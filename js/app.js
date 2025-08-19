@@ -422,6 +422,19 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTimeline(os);
     renderMediaGallery(os);
     
+    // MODIFICAÇÃO: Adiciona a assinatura dinamicamente ao modal
+    const existingSignature = detailsModal.querySelector('.dev-signature-modal');
+    if (existingSignature) {
+        existingSignature.remove();
+    }
+    const actionsSection = detailsModal.querySelector('.os-actions-section');
+    if (actionsSection) {
+        const signatureDiv = document.createElement('div');
+        signatureDiv.className = 'dev-signature-modal text-center text-xs text-gray-500 mt-4 px-4';
+        signatureDiv.innerHTML = `<p>Desenvolvido com 🚀 por <strong>thIAguinho Soluções</strong></p>`;
+        actionsSection.appendChild(signatureDiv);
+    }
+    
     detailsModal.classList.remove('hidden');
     detailsModal.classList.add('flex');
   };
@@ -506,7 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  // MODIFICAÇÃO: Função de exportação atualizada com a nova assinatura
   const exportOsToPrint = (osId) => {
     const os = allServiceOrders[osId];
     if (!os) {
