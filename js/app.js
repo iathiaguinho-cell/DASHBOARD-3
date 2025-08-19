@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allServiceOrders = {};
   let lightboxMedia = [];
   let currentLightboxIndex = 0;
-  let filesToUpload = null;
+  let filesToUpload = [];
   let appStartTime = Date.now();
   
   const USERS = [
@@ -345,13 +345,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
-  // MODIFICAÇÃO: Função agora registra a mudança de status no histórico
   const updateServiceOrderStatus = async (osId, newStatus) => {
     const os = allServiceOrders[osId];
     if (!os) return;
     const oldStatus = os.status;
 
-    // Prepara o registro de log ANTES de qualquer outra coisa
     const logEntry = {
         timestamp: new Date().toISOString(),
         user: currentUser.name,
@@ -359,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
         type: 'status'
     };
 
-    // Prepara as atualizações principais da O.S.
     const updates = { 
       status: newStatus, 
       lastUpdate: new Date().toISOString() 
@@ -370,12 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (newStatus === 'Entregue') updates.responsibleForDelivery = currentUser.name;
     
     try {
-        // Salva o novo log no histórico
         const logsRef = db.ref(`serviceOrders/${osId}/logs`);
         const newLogRef = logsRef.push();
         await newLogRef.set(logEntry);
 
-        // Atualiza o status da O.S.
         await db.ref(`serviceOrders/${osId}`).update(updates);
         
         sendTeamNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)} por ${currentUser.name}`);
@@ -421,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logOsId').value = osId;
     logForm.reset();
     document.getElementById('fileName').textContent = '';
-    filesToUpload = null;
+    filesToUpload = [];
     postLogActions.style.display = 'none';
     
     renderTimeline(os);
@@ -511,6 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   
+  // MODIFICAÇÃO: Função de exportação atualizada com a nova assinatura
   const exportOsToPrint = (osId) => {
     const os = allServiceOrders[osId];
     if (!os) {
@@ -576,6 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .signature p { margin-top: 5px; font-size: 14px; }
             .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
             .photo-gallery img { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+            .dev-signature { margin-top: 40px; font-size: 12px; color: #888; }
+            .dev-signature strong { color: #555; }
             @media print {
               body { padding: 10px; }
               .no-print { display: none; }
@@ -638,6 +636,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>Assinatura do Cliente</p>
               </div>
               <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+              <div class="dev-signature">
+                <p>Desenvolvido com 🚀 por <strong>thIAguinho Soluções</strong></p>
+              </div>
             </div>
           </div>
           <script>
@@ -882,7 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filesToUpload && filesToUpload.length > 0) {
             submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Enviando mídia...`;
             
-            const mediaPromises = Array.from(filesToUpload).map(file => {
+            const mediaPromises = filesToUpload.map(file => {
                 if (file.type === 'application/pdf') {
                     return uploadToGofile(file).then(url => ({ type: file.type, url: url, timestamp: new Date().toISOString() }));
                 } else {
@@ -902,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await newLogRef.set(logEntry);
 
         logForm.reset();
-        filesToUpload = null;
+        filesToUpload = [];
         document.getElementById('fileName').textContent = '';
         postLogActions.style.display = 'flex';
         sendTeamNotification(`Novo registro adicionado à O.S. ${allServiceOrders[osId].placa} por ${currentUser.name}`);
@@ -944,7 +945,6 @@ document.addEventListener('DOMContentLoaded', () => {
     postLogActions.style.display = 'none';
   });
   
-  // MODIFICAÇÃO: Adiciona o log de KM ao submeter o formulário
   kmUpdateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -952,10 +952,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const newKm = parseInt(document.getElementById('updateKmInput').value);
     
     if (newKm && newKm > 0) {
-      // Atualiza o KM na raiz da O.S.
       await db.ref(`serviceOrders/${osId}/km`).set(newKm);
 
-      // Cria e salva o registro no histórico
       const logEntry = {
         timestamp: new Date().toISOString(),
         user: currentUser.name,
@@ -1011,11 +1009,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   });
   
-  // MODIFICAÇÃO: Garante que o input da câmera permita múltiplos arquivos
   openCameraBtn.addEventListener('click', () => {
-    mediaInput.setAttribute('accept', 'image/*'); // Apenas imagens para a câmera
+    mediaInput.setAttribute('accept', 'image/*');
     mediaInput.setAttribute('capture', 'camera');
-    mediaInput.multiple = true; // Força o atributo para múltiplos arquivos
+    mediaInput.multiple = true;
+    mediaInput.value = null;
     mediaInput.click();
   });
   
@@ -1023,13 +1021,17 @@ document.addEventListener('DOMContentLoaded', () => {
     mediaInput.setAttribute('accept', 'image/*,video/*,application/pdf');
     mediaInput.removeAttribute('capture');
     mediaInput.multiple = true;
+    mediaInput.value = null;
     mediaInput.click();
   });
   
   mediaInput.addEventListener('change', (e) => {
-    filesToUpload = e.target.files;
+    if (e.target.files.length > 0) {
+        filesToUpload.push(...e.target.files);
+    }
+    
     if (filesToUpload.length > 0) {
-      document.getElementById('fileName').textContent = `${filesToUpload.length} arquivo(s) selecionado(s)`;
+      document.getElementById('fileName').textContent = `${filesToUpload.length} arquivo(s) na fila`;
     } else {
       document.getElementById('fileName').textContent = '';
     }
