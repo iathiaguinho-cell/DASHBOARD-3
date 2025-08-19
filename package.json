@@ -1,0 +1,17 @@
+{
+  "name": "thiaguinhos-solucoes",
+  "version": "1.0.0",
+  "description": "Site oficial da thIAguinhos Soluções - Automação Personalizada",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve .",
+    "build": "echo 'Build completed'"
+  },
+  "keywords": ["automação", "soluções", "tecnologia"],
+  "author": "thIAguinhos Soluções",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
