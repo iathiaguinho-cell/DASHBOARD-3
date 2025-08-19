@@ -1,705 +1,277 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>thIAguinhos Soluções - Automação Personalizada para Empresas</title>
-    <meta name="description" content="Especialistas em soluções práticas de automação para empresas e pessoas. Criamos fluxos personalizados que otimizam tempo e facilitam a rotina do dia a dia.">
-    <meta name="keywords" content="automação, soluções empresariais, sistemas personalizados, otimização, tecnologia">
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="thIAguinhos Soluções - Automação Personalizada">
-    <meta property="og:description" content="Criamos soluções sob medida para otimizar sua rotina e aumentar a produtividade">
-    <meta property="og:type" content="website">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'inter': ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            900: '#1e3a8a'
-                        },
-                        accent: {
-                            500: '#10b981',
-                            600: '#059669'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .card-hover {
-            transition: all 0.3s ease;
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        
-        .animate-float {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-        
-        .tech-icon {
-            transition: all 0.3s ease;
-        }
-        
-        .tech-icon:hover {
-            transform: scale(1.1) rotate(5deg);
-        }
-        
-        .parallax {
-            background-attachment: fixed;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-size: cover;
-        }
-        
-        .typing-animation {
-            border-right: 2px solid #3b82f6;
-            animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
-        }
-        
-        @keyframes typing {
-            from { width: 0 }
-            to { width: 100% }
-        }
-        
-        @keyframes blink-caret {
-            from, to { border-color: transparent }
-            50% { border-color: #3b82f6 }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Oficina - Gestão de Pátio</title>
+  
+  <!-- Adições para PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="font-inter bg-white">
-    <!-- Navigation -->
-    <nav class="fixed w-full z-50 bg-white/95 backdrop-blur-sm shadow-sm">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                        <i class='bx bx-code-alt text-white text-xl'></i>
-                    </div>
-                    <span class="text-2xl font-bold text-gray-800">thIAguinhos</span>
-                    <span class="text-sm text-blue-600 font-medium">Soluções</span>
+<body class="bg-gray-100">
+  <!-- TELA DE LOGIN POR USUÁRIO -->
+  <div id="userScreen" class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">CHEVRON</h1>
+      <p class="text-xl font-semibold text-blue-800">Bosch Car Service</p>
+      <p class="text-gray-500 my-8">Selecione seu perfil para iniciar</p>
+      <div id="userList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="app" class="hidden">
+    <header class="bg-white shadow-md sticky top-0 z-40">
+      <div id="attention-panel-container">
+        <div id="attention-panel" class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2"></div>
+      </div>
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">CHEVRON</h1>
+                <p class="text-sm font-semibold text-blue-800 -mt-1">Bosch Car Service</p>
+            </div>
+            <div id="alert-led" class="hidden"></div>
+            <button id="toggle-panel-btn" class="text-gray-400 hover:text-blue-800 p-1" title="Mostrar/Ocultar Painel de Alertas">
+                <i class='bx bxs-chevron-up text-2xl'></i>
+            </button>
+        </div>
+        <div class="flex items-center gap-4">
+          <button id="addOSBtn" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 flex items-center gap-2">
+            <i class='bx bx-plus-circle'></i><span class="hidden sm:inline">Nova O.S.</span>
+          </button>
+          <div class="text-right">
+            <p id="currentUserName" class="font-semibold text-gray-700"></p>
+            <button id="logoutButton" class="text-sm text-red-500 hover:text-red-700">Sair</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-6" id="kanbanBoard"></div>
+    </main>
+  </div>
+
+  <!-- MODAL PARA CRIAR/EDITAR O.S. -->
+  <div id="osModal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="modal-content w-full max-w-lg">
+      <div class="modal-header">
+        <h2 id="osModalTitle" class="text-2xl font-bold text-gray-800">Nova Ordem de Serviço</h2>
+      </div>
+      <div class="modal-body">
+        <form id="osForm" class="space-y-4">
+          <input type="hidden" id="osId">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="form-group">
+              <label for="osPlaca" class="block text-sm font-medium text-gray-700 mb-1">Placa</label>
+              <input id="osPlaca" type="text" placeholder="ABC1234" required class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="form-group">
+              <label for="osModelo" class="block text-sm font-medium text-gray-700 mb-1">Modelo do Veículo</label>
+              <input id="osModelo" type="text" placeholder="Ex: Gol, Corolla" required class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="form-group sm:col-span-2">
+              <label for="osCliente" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+              <input id="osCliente" type="text" placeholder="Nome completo" required class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="form-group">
+              <label for="osTelefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+              <input id="osTelefone" type="tel" placeholder="(11) 99999-9999" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="form-group">
+              <label for="osKm" class="block text-sm font-medium text-gray-700 mb-1">KM do Veículo</label>
+              <input id="osKm" type="number" placeholder="Ex: 50000" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="form-group sm:col-span-2">
+              <label for="osResponsavel" class="block text-sm font-medium text-gray-700 mb-1">Responsável pelo Atendimento</label>
+              <select id="osResponsavel" required class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">Selecione um responsável...</option>
+              </select>
+            </div>
+            <div class="form-group sm:col-span-2">
+              <label for="osObservacoes" class="block text-sm font-medium text-gray-700 mb-1">Observações Iniciais / Queixa do Cliente</label>
+              <textarea id="osObservacoes" placeholder="Ex: Barulho no motor, vazamento de óleo..." rows="3" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-close-modal btn bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2">Cancelar</button>
+        <button type="submit" form="osForm" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DETALHES DA O.S. -->
+  <div id="detailsModal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="modal-content w-full max-w-6xl">
+      <div class="modal-header">
+        <div class="flex justify-between items-start">
+          <h2 class="text-2xl font-bold text-gray-800">Detalhes da Ordem de Serviço</h2>
+          <button class="btn-close-modal text-3xl text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+      </div>
+      
+      <div class="modal-body">
+        <div class="os-details-container">
+          <!-- CABEÇALHO COM INFORMAÇÕES PRINCIPAIS -->
+          <div class="os-header">
+             <div class="flex justify-between items-start flex-wrap">
+                <div class="mb-4">
+                    <h2 id="detailsPlacaModelo" class="text-3xl font-bold text-gray-800"></h2>
+                    <p id="detailsCliente" class="text-lg text-gray-600"></p>
+                    <p id="detailsKm" class="text-lg text-blue-800 font-bold mt-1"></p>
                 </div>
-                
-                <div class="hidden md:flex space-x-8">
-                    <a href="#inicio" class="text-gray-700 hover:text-blue-600 transition-colors">Início</a>
-                    <a href="#sobre" class="text-gray-700 hover:text-blue-600 transition-colors">Sobre</a>
-                    <a href="#servicos" class="text-gray-700 hover:text-blue-600 transition-colors">Serviços</a>
-                    <a href="#projetos" class="text-gray-700 hover:text-blue-600 transition-colors">Projetos</a>
-                    <a href="#contato" class="text-gray-700 hover:text-blue-600 transition-colors">Contato</a>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm w-full sm:w-auto">
+                    <div class="font-semibold text-gray-500">Atendente:</div>
+                    <div id="responsible-attendant">N/D</div>
+                    <div class="font-semibold text-gray-500">Orçamento:</div>
+                    <div id="responsible-budget">N/D</div>
+                    <div class="font-semibold text-gray-500">Serviço:</div>
+                    <div id="responsible-service">N/D</div>
+                    <div class="font-semibold text-gray-500">Entrega:</div>
+                    <div id="responsible-delivery">N/D</div>
                 </div>
-                
-                <button id="mobile-menu-btn" class="md:hidden text-gray-700">
-                    <i class='bx bx-menu text-2xl'></i>
-                </button>
+            </div>
+            <div id="detailsObservacoes" class="hidden mt-4 pt-4 border-t border-gray-200">
+                <!-- Conteúdo injetado pelo JS -->
+            </div>
+          </div>
+          
+          <!-- CONTEÚDO PRINCIPAL -->
+          <div class="os-content">
+            <!-- COLUNA ESQUERDA (Conteúdo que rola) -->
+            <div class="space-y-6">
+              <!-- SEÇÃO DE MÍDIA -->
+              <div class="bg-white rounded-lg shadow p-4">
+                <h3 class="section-title">Galeria de Mídia</h3>
+                <div id="thumbnail-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-4"></div>
+              </div>
+              
+              <!-- SEÇÃO DE HISTÓRICO -->
+              <div class="bg-white rounded-lg shadow p-4">
+                <h3 class="section-title">Histórico da O.S.</h3>
+                <div id="timelineContainer" class="timeline mt-4 space-y-6"></div>
+              </div>
             </div>
             
-            <!-- Mobile Menu -->
-            <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4">
-                <div class="flex flex-col space-y-4">
-                    <a href="#inicio" class="text-gray-700 hover:text-blue-600 transition-colors">Início</a>
-                    <a href="#sobre" class="text-gray-700 hover:text-blue-600 transition-colors">Sobre</a>
-                    <a href="#servicos" class="text-gray-700 hover:text-blue-600 transition-colors">Serviços</a>
-                    <a href="#projetos" class="text-gray-700 hover:text-blue-600 transition-colors">Projetos</a>
-                    <a href="#contato" class="text-gray-700 hover:text-blue-600 transition-colors">Contato</a>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section id="inicio" class="min-h-screen flex items-center gradient-bg relative overflow-hidden">
-        <div class="absolute inset-0 bg-black/20"></div>
-        <div class="container mx-auto px-6 relative z-10">
-            <div class="grid lg:grid-cols-2 gap-12 items-center">
-                <div class="text-white">
-                    <h1 class="text-5xl lg:text-7xl font-bold mb-6 leading-tight">
-                        Automação
-                        <span class="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
-                            Sob Medida
-                        </span>
-                    </h1>
-                    <p class="text-xl lg:text-2xl mb-8 text-gray-200 leading-relaxed">
-                        Criamos soluções práticas em automação para empresas e pessoas, 
-                        sempre pensando em <strong>facilitar e otimizar</strong> o tempo na rotina do dia a dia.
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="#projetos" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 text-center">
-                            Ver Projetos
-                        </a>
-                        <a href="#contato" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all text-center">
-                            Fale Conosco
-                        </a>
+            <!-- COLUNA DIREITA (Ações fixas) -->
+            <div class="os-actions-section space-y-6">
+              <div class="bg-white rounded-lg shadow p-4">
+                  <h3 class="section-title">Adicionar Atualização</h3>
+                  <form id="logForm" class="space-y-4">
+                    <input type="hidden" id="logOsId">
+                    <textarea id="logDescricao" placeholder="Descrição do serviço, peça, observação..." rows="3" required class="p-2 border rounded w-full"></textarea>
+                    <div class="flex gap-4">
+                      <input id="logPecas" type="text" placeholder="Peças (opcional)" class="p-2 border rounded w-1/2">
+                      <input id="logValor" type="number" step="0.01" placeholder="Valor R$ (opcional)" class="p-2 border rounded w-1/2">
                     </div>
-                </div>
-                
-                <div class="hidden lg:block">
-                    <div class="relative">
-                        <div class="animate-float">
-                            <div class="w-96 h-96 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
-                                <i class='bx bx-cog text-9xl text-white/80'></i>
-                            </div>
-                        </div>
-                        <div class="absolute -top-10 -right-10 w-20 h-20 bg-yellow-400 rounded-full animate-pulse"></div>
-                        <div class="absolute -bottom-10 -left-10 w-16 h-16 bg-green-400 rounded-full animate-pulse delay-1000"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Scroll Indicator -->
-        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce">
-            <i class='bx bx-chevron-down text-3xl'></i>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="sobre" class="py-20 bg-gray-50">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
-                    Nossa <span class="text-blue-600">Filosofia</span>
-                </h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    Assim como um alfaiate faz uma roupa personalizada para cada usuário, 
-                    criamos soluções tecnológicas sob medida para cada cliente.
-                </p>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-16 items-center">
-                <div>
-                    <div class="bg-white p-8 rounded-2xl shadow-lg">
-                        <div class="flex items-center mb-6">
-                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                                <i class='bx bx-customize text-blue-600 text-2xl'></i>
-                            </div>
-                            <h3 class="text-2xl font-bold text-gray-800">Personalização Total</h3>
-                        </div>
-                        <p class="text-gray-600 leading-relaxed">
-                            Enquanto lojas de departamento vendem soluções genéricas que sempre precisam de adaptações, 
-                            nosso diferencial é criar <strong>exatamente o que o cliente precisa</strong>.
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="space-y-6">
-                    <div class="flex items-start space-x-4">
-                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                            <i class='bx bx-check text-green-600'></i>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-800 mb-2">Análise Detalhada</h4>
-                            <p class="text-gray-600">Estudamos profundamente suas necessidades antes de propor qualquer solução.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                            <i class='bx bx-check text-green-600'></i>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-800 mb-2">Desenvolvimento Personalizado</h4>
-                            <p class="text-gray-600">Cada linha de código é pensada especificamente para seu negócio.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                            <i class='bx bx-check text-green-600'></i>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-800 mb-2">Suporte Contínuo</h4>
-                            <p class="text-gray-600">Acompanhamos a evolução da sua empresa e adaptamos as soluções conforme necessário.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Services Section -->
-    <section id="servicos" class="py-20 bg-white">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
-                    Nossos <span class="text-blue-600">Serviços</span>
-                </h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    Especializados em criar fluxos personalizados que transformam a forma como você trabalha
-                </p>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="card-hover bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6">
-                        <i class='bx bx-desktop text-blue-600 text-3xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Sistemas Web</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Dashboards personalizados, sistemas de gestão e aplicações web que se adaptam perfeitamente ao seu fluxo de trabalho.
-                    </p>
-                </div>
-                
-                <div class="card-hover bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-6">
-                        <i class='bx bx-mobile-alt text-green-600 text-3xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Apps Mobile</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Aplicações móveis intuitivas que permitem gerenciar seus processos de qualquer lugar, a qualquer momento.
-                    </p>
-                </div>
-                
-                <div class="card-hover bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-6">
-                        <i class='bx bx-bot text-purple-600 text-3xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Automação</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Automatizamos tarefas repetitivas e criamos fluxos inteligentes que economizam horas do seu dia.
-                    </p>
-                </div>
-                
-                <div class="card-hover bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <div class="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mb-6">
-                        <i class='bx bx-data text-yellow-600 text-3xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Gestão de Dados</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Organizamos e estruturamos seus dados para facilitar a tomada de decisões estratégicas.
-                    </p>
-                </div>
-                
-                <div class="card-hover bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-6">
-                        <i class='bx bx-line-chart text-red-600 text-3xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Analytics</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Relatórios e dashboards que transformam dados em insights valiosos para seu negócio.
-                    </p>
-                </div>
-                
-                <div class="card-hover bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
-                    <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mb-6">
-                        <i class='bx bx-support text-indigo-600 text-3xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Consultoria</h3>
-                    <p class="text-gray-600 leading-relaxed">
-                        Analisamos seus processos atuais e identificamos oportunidades de otimização e automação.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Projects Section -->
-    <section id="projetos" class="py-20 bg-gray-50">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
-                    Projetos em <span class="text-blue-600">Funcionamento</span>
-                </h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    Conheça algumas das soluções que já estão transformando a rotina de nossos clientes
-                </p>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-12">
-                <!-- Dashboard Oficina -->
-                <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden">
-                    <div class="h-64 bg-gradient-to-br from-blue-500 to-purple-600 relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/20"></div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <i class='bx bx-car text-white text-6xl'></i>
-                        </div>
-                        <div class="absolute top-4 right-4">
-                            <span class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                                ✓ Ativo
-                            </span>
-                        </div>
-                    </div>
-                    <div class="p-8">
-                        <h3 class="text-2xl font-bold text-gray-800 mb-4">Dashboard Oficina CHEVRON</h3>
-                        <p class="text-gray-600 mb-6 leading-relaxed">
-                            Sistema completo de gestão de pátio para oficina mecânica com interface Kanban, 
-                            controle de ordens de serviço, sistema de alertas em tempo real e galeria de mídia integrada.
-                        </p>
-                        <div class="flex flex-wrap gap-2 mb-6">
-                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Firebase</span>
-                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">JavaScript</span>
-                            <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Tailwind CSS</span>
-                            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">PWA</span>
-                        </div>
-                        <div class="flex gap-4">
-                            <a href="https://iathiaguinho-cell.github.io/DASHBOARD-3/" target="_blank" 
-                               class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-                                <i class='bx bx-link-external'></i>
-                                Ver Demo
-                            </a>
-                            <button class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-                                Saiba Mais
+                    <div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="openCameraBtn" class="w-full btn bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 flex items-center justify-center gap-2 cursor-pointer">
+                                <i class='bx bxs-camera'></i> Câmera
+                            </button>
+                            <button type="button" id="openGalleryBtn" class="w-full btn bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 flex items-center justify-center gap-2 cursor-pointer">
+                                <i class='bx bxs-image-add'></i> Galeria
                             </button>
                         </div>
+                      <!-- ATUALIZAÇÃO PARA ACEITAR PDF -->
+                      <input id="media-input" type="file" class="hidden" multiple accept="image/*,video/*,application/pdf">
+                      <p id="fileName" class="text-sm text-gray-500 mt-1 truncate"></p>
                     </div>
-                </div>
-                
-                <!-- Lista de Compras -->
-                <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden">
-                    <div class="h-64 bg-gradient-to-br from-green-500 to-teal-600 relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/20"></div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <i class='bx bx-list-check text-white text-6xl'></i>
-                        </div>
-                        <div class="absolute top-4 right-4">
-                            <span class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                                ✓ Ativo
-                            </span>
-                        </div>
+                    <button type="submit" class="w-full btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 flex items-center justify-center gap-2">
+                      <i class='bx bx-message-square-add'></i> Adicionar ao Histórico
+                    </button>
+                  </form>
+                  <div id="post-log-actions" class="hidden mt-4 border-t pt-4 space-y-2">
+                    <h4 class="font-semibold text-gray-700 text-center">Registro Salvo! Mover O.S.?</h4>
+                    <button id="btn-move-next" class="w-full btn bg-blue-500 hover:bg-blue-600 text-white">Avançar Status</button>
+                    <button id="btn-move-prev" class="w-full btn bg-yellow-500 hover:bg-yellow-600 text-white">Retroceder Status</button>
+                    <button id="btn-stay" class="w-full btn bg-gray-400 hover:bg-gray-500 text-white">Apenas Atualizar</button>
+                  </div>
+              </div>
+              <div class="bg-white rounded-lg shadow p-4">
+                  <form id="kmUpdateForm">
+                    <h4 class="font-semibold text-gray-700 mb-2">Atualizar KM</h4>
+                    <div class="flex gap-2">
+                        <input id="updateKmInput" type="number" placeholder="Nova KM" class="p-2 border rounded w-full">
+                        <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white px-3" title="Salvar KM"><i class='bx bx-save'></i></button>
                     </div>
-                    <div class="p-8">
-                        <h3 class="text-2xl font-bold text-gray-800 mb-4">Lista de Compras Inteligente</h3>
-                        <p class="text-gray-600 mb-6 leading-relaxed">
-                            Aplicação web para gerenciamento de listas de compras com funcionalidades avançadas, 
-                            sincronização em tempo real e interface otimizada para uso mobile.
-                        </p>
-                        <div class="flex flex-wrap gap-2 mb-6">
-                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">HTML5</span>
-                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">CSS3</span>
-                            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">JavaScript</span>
-                            <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">LocalStorage</span>
-                        </div>
-                        <div class="flex gap-4">
-                            <a href="https://iathiaguinho-cell.github.io/Lista-de-Compras-/" target="_blank" 
-                               class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
-                                <i class='bx bx-link-external'></i>
-                                Ver Demo
-                            </a>
-                            <button class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-                                Saiba Mais
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                  </form>
+              </div>
+              <!-- NOVO BOTÃO DE EXPORTAR -->
+              <div class="bg-white rounded-lg shadow p-4">
+                  <button id="exportOsBtn" class="w-full btn bg-gray-700 hover:bg-gray-800 text-white">
+                    <i class='bx bx-printer'></i> Exportar / Imprimir O.S.
+                  </button>
+              </div>
+              <div class="bg-white rounded-lg shadow p-4">
+                  <button id="deleteOsBtn" class="w-full btn bg-red-600 hover:bg-red-700 text-white hidden">
+                    <i class='bx bx-trash'></i> Excluir O.S.
+                  </button>
+              </div>
             </div>
-            
-            <div class="text-center mt-12">
-                <p class="text-lg text-gray-600 mb-6">
-                    Quer ver sua ideia se tornar realidade?
-                </p>
-                <a href="#contato" class="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
-                    <i class='bx bx-rocket'></i>
-                    Vamos Conversar
-                </a>
-            </div>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </div>
 
-    <!-- Team Section -->
-    <section class="py-20 bg-white">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl lg:text-5xl font-bold text-gray-800 mb-6">
-                    Nossa <span class="text-blue-600">Equipe</span>
-                </h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    Profissionais apaixonados por tecnologia e inovação
-                </p>
-            </div>
-            
-            <div class="grid md:grid-cols-2 gap-12 max-w-4xl mx-auto">
-                <div class="text-center">
-                    <div class="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <i class='bx bx-user text-white text-5xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-2">Thiago Ventura Valêncio</h3>
-                    <p class="text-blue-600 font-medium mb-4">CEO & Fundador</p>
-                    <p class="text-gray-600 leading-relaxed">
-                        Especialista em automação e desenvolvimento de soluções personalizadas. 
-                        Lidera a visão estratégica da empresa e o desenvolvimento de projetos inovadores.
-                    </p>
-                </div>
-                
-                <div class="text-center">
-                    <div class="w-32 h-32 bg-gradient-to-br from-green-500 to-teal-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <i class='bx bx-user text-white text-5xl'></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-2">Fernando Cesar Fernandes Junior</h3>
-                    <p class="text-green-600 font-medium mb-4">Sócio Criador</p>
-                    <p class="text-gray-600 leading-relaxed">
-                        Co-fundador com vasta experiência em desenvolvimento e arquitetura de sistemas. 
-                        Responsável pela implementação técnica e qualidade das soluções entregues.
-                    </p>
-                </div>
-            </div>
+  <!-- LIGHTBOX PARA VISUALIZAÇÃO DE MÍDIA -->
+  <div id="lightbox" class="modal fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0" id="lightbox-close-bg"></div>
+    <div class="relative bg-black bg-opacity-50 p-4 rounded-lg max-w-4xl w-full">
+        <div id="lightbox-content" class="flex items-center justify-center min-h-[300px]"></div>
+        <button id="lightbox-close" class="absolute -top-2 -right-2 bg-white text-black rounded-full h-8 w-8 flex items-center justify-center">&times;</button>
+        <button id="lightbox-prev" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/50 hover:bg-white text-black p-2 rounded-full"><i class='bx bx-chevron-left text-2xl'></i></button>
+        <button id="lightbox-next" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/50 hover:bg-white text-black p-2 rounded-full"><i class='bx bx-chevron-right text-2xl'></i></button>
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4">
+            <a id="lightbox-download" href="#" download class="bg-blue-600 text-white p-2 rounded-full"><i class='bx bxs-download'></i></a>
+            <button id="lightbox-copy" class="bg-blue-600 text-white p-2 rounded-full"><i class='bx bx-copy'></i></button>
         </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Contact Section -->
-    <section id="contato" class="py-20 bg-gray-900 text-white">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl lg:text-5xl font-bold mb-6">
-                    Vamos <span class="text-blue-400">Conversar</span>
-                </h2>
-                <p class="text-xl text-gray-300 max-w-3xl mx-auto">
-                    Pronto para transformar suas ideias em soluções reais? Entre em contato conosco!
-                </p>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-12 items-start">
-                <div>
-                    <h3 class="text-2xl font-bold mb-8">Como podemos ajudar?</h3>
-                    
-                    <div class="space-y-6">
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <i class='bx bx-phone text-white text-xl'></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold mb-2">Telefone</h4>
-                                <p class="text-gray-300">Entre em contato direto conosco</p>
-                                <a href="tel:+5511999999999" class="text-blue-400 hover:text-blue-300 transition-colors">
-                                    (11) 99999-9999
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <i class='bx bx-envelope text-white text-xl'></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold mb-2">Email</h4>
-                                <p class="text-gray-300">Envie sua proposta ou dúvida</p>
-                                <a href="mailto:contato@thiaguinhos.com.br" class="text-blue-400 hover:text-blue-300 transition-colors">
-                                    contato@thiaguinhos.com.br
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start space-x-4">
-                            <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <i class='bx bx-time text-white text-xl'></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold mb-2">Horário de Atendimento</h4>
-                                <p class="text-gray-300">Segunda a Sexta: 8h às 18h</p>
-                                <p class="text-gray-300">Sábado: 8h às 12h</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-800 p-8 rounded-2xl">
-                    <form id="contact-form" class="space-y-6">
-                        <div>
-                            <label for="name" class="block text-sm font-medium mb-2">Nome Completo</label>
-                            <input type="text" id="name" name="name" required 
-                                   class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
-                        </div>
-                        
-                        <div>
-                            <label for="email" class="block text-sm font-medium mb-2">Email</label>
-                            <input type="email" id="email" name="email" required 
-                                   class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
-                        </div>
-                        
-                        <div>
-                            <label for="phone" class="block text-sm font-medium mb-2">Telefone</label>
-                            <input type="tel" id="phone" name="phone" 
-                                   class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
-                        </div>
-                        
-                        <div>
-                            <label for="subject" class="block text-sm font-medium mb-2">Assunto</label>
-                            <select id="subject" name="subject" required 
-                                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white">
-                                <option value="">Selecione um assunto</option>
-                                <option value="orcamento">Solicitar Orçamento</option>
-                                <option value="consultoria">Consultoria</option>
-                                <option value="suporte">Suporte Técnico</option>
-                                <option value="parceria">Parceria</option>
-                                <option value="outros">Outros</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label for="message" class="block text-sm font-medium mb-2">Mensagem</label>
-                            <textarea id="message" name="message" rows="4" required 
-                                      class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
-                                      placeholder="Conte-nos sobre seu projeto ou necessidade..."></textarea>
-                        </div>
-                        
-                        <button type="submit" 
-                                class="w-full bg-blue-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                            <i class='bx bx-send'></i>
-                            Enviar Mensagem
-                        </button>
-                    </form>
-                </div>
-            </div>
+  <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+  <div id="confirmDeleteModal" class="modal fixed inset-0 z-[101] hidden items-center justify-center p-4">
+    <div class="modal-content w-full max-w-md">
+        <div class="modal-header">
+            <h2 class="text-xl font-bold text-red-600 flex items-center gap-2"><i class='bx bxs-error-circle'></i>Confirmar Exclusão</h2>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-black text-white py-12">
-        <div class="container mx-auto px-6">
-            <div class="grid md:grid-cols-3 gap-8">
-                <div>
-                    <div class="flex items-center space-x-2 mb-4">
-                        <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <i class='bx bx-code-alt text-white'></i>
-                        </div>
-                        <span class="text-xl font-bold">thIAguinhos Soluções</span>
-                    </div>
-                    <p class="text-gray-400 leading-relaxed">
-                        Especialistas em automação personalizada para empresas e pessoas. 
-                        Transformamos ideias em soluções reais.
-                    </p>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold mb-4">Serviços</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="#" class="hover:text-white transition-colors">Sistemas Web</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Apps Mobile</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Automação</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors">Consultoria</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold mb-4">Contato</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li>contato@thiaguinhos.com.br</li>
-                        <li>(11) 99999-9999</li>
-                        <li>Segunda a Sexta: 8h às 18h</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2024 thIAguinhos Soluções. Todos os direitos reservados.</p>
-                <p class="mt-2 text-sm">Desenvolvido com 🤖 por thIAguinhos Soluções</p>
-            </div>
+        <div class="modal-body">
+            <p id="confirmDeleteText" class="text-gray-700">Você tem certeza que deseja excluir esta Ordem de Serviço? Esta ação não pode ser desfeita.</p>
         </div>
-    </footer>
+        <div class="modal-footer">
+            <button id="cancelDeleteBtn" class="btn bg-gray-200 hover:bg-gray-300 text-gray-800">Cancelar</button>
+            <button id="confirmDeleteBtn" class="btn bg-red-600 hover:bg-red-700 text-white">Sim, Excluir</button>
+        </div>
+    </div>
+  </div>
 
-    <!-- Scripts -->
-    <script>
-        // Mobile Menu Toggle
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileMenu = document.getElementById('mobile-menu');
-        
-        mobileMenuBtn.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
+
+  <!-- SCRIPTS -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Script para registrar o Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/DASHBOARD-3/sw.js').then(registration => {
+          console.log('ServiceWorker registrado com sucesso: ', registration.scope);
+        }, err => {
+          console.log('Falha no registro do ServiceWorker: ', err);
         });
-        
-        // Smooth Scrolling
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                    // Close mobile menu if open
-                    mobileMenu.classList.add('hidden');
-                }
-            });
-        });
-        
-        // Contact Form
-        document.getElementById('contact-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Get form data
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            // Simple validation
-            if (!data.name || !data.email || !data.message) {
-                alert('Por favor, preencha todos os campos obrigatórios.');
-                return;
-            }
-            
-            // Simulate form submission
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            
-            submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Enviando...';
-            submitBtn.disabled = true;
-            
-            setTimeout(() => {
-                alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
-                this.reset();
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }, 2000);
-        });
-        
-        // Navbar background on scroll
-        window.addEventListener('scroll', () => {
-            const nav = document.querySelector('nav');
-            if (window.scrollY > 100) {
-                nav.classList.add('bg-white/95');
-                nav.classList.remove('bg-white/95');
-            }
-        });
-        
-        // Intersection Observer for animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-        
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, observerOptions);
-        
-        // Observe elements for animation
-        document.querySelectorAll('.card-hover').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(30px)';
-            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-            observer.observe(el);
-        });
-    </script>
+      });
+    }
+  </script>
 </body>
 </html>
