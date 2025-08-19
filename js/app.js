@@ -649,7 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <p>Documento gerado em: ${new Date().toLocaleString('pt-BR')}</p>
               <div class="dev-signature">
-                <p>Desenvolvido com 🚀 por <strong>thIAguinho Soluções</strong></p>
+                <p>Desenvolvido com 🤖 por <strong>thIAguinho Soluções</strong></p>
               </div>
             </div>
           </div>
