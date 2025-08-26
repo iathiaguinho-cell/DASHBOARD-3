@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     kanbanBoard.innerHTML = STATUS_LIST.map(status => {
       const isCollapsed = collapsedState[status];
       
-      // ALTERAÇÃO 1: O campo de busca agora é criado para TODAS as colunas.
       const searchInputHTML = `
         <div class="my-2">
           <input type="search" data-status="${status}" placeholder="Buscar por Placa..." 
@@ -161,8 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const kmInfo = `<p class="text-xs text-gray-500">KM: ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}</p>`;
     
+    // ALTERAÇÃO: Cria o HTML para o indicador de prioridade, se houver um.
+    const priorityIndicatorHTML = os.priority ? `<div class="priority-indicator priority-${os.priority}" title="Urgência: ${os.priority}"></div>` : '';
+
     return `
       <div id="${os.id}" class="vehicle-card status-${os.status}" data-os-id="${os.id}">
+        ${priorityIndicatorHTML}
         <div class="flex justify-between items-start">
             <div class="card-clickable-area cursor-pointer flex-grow">
               <p class="font-bold text-base text-gray-800">${os.placa}</p>
@@ -770,19 +773,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ALTERAÇÃO 2: Lógica de busca atualizada para funcionar em TODAS as colunas.
   kanbanBoard.addEventListener('input', (e) => {
       if (e.target.matches('.search-input')) {
           const status = e.target.dataset.status;
           const searchTerm = e.target.value.toUpperCase().trim();
 
-          // A coluna "Entregue" tem uma lógica especial porque pode ter muitos itens
           if (status === 'Entregue') {
               renderDeliveredColumn();
               return;
           }
 
-          // Para as outras colunas, a lógica é mais simples: apenas mostra ou esconde os cards
           const columnList = kanbanBoard.querySelector(`.vehicle-list[data-status="${status}"]`);
           const cards = columnList.querySelectorAll('.vehicle-card');
 
@@ -791,9 +791,9 @@ document.addEventListener('DOMContentLoaded', () => {
               const modelo = card.querySelector('.text-sm').textContent.toUpperCase();
               
               if (placa.includes(searchTerm) || modelo.includes(searchTerm)) {
-                  card.style.display = ''; // Mostra o card
+                  card.style.display = '';
               } else {
-                  card.style.display = 'none'; // Esconde o card
+                  card.style.display = 'none';
               }
           });
       }
@@ -834,6 +834,9 @@ document.addEventListener('DOMContentLoaded', () => {
   osForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    // ALTERAÇÃO: Captura o valor da prioridade selecionada
+    const priority = document.querySelector('input[name="osPrioridade"]:checked').value;
+
     const osData = {
       placa: document.getElementById('osPlaca').value.toUpperCase(),
       modelo: document.getElementById('osModelo').value,
@@ -842,6 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
       km: parseInt(document.getElementById('osKm').value) || 0,
       responsible: document.getElementById('osResponsavel').value,
       observacoes: document.getElementById('osObservacoes').value,
+      priority: priority, // Salva a prioridade no objeto de dados
       status: 'Aguardando-Mecanico',
       createdAt: new Date().toISOString(),
       lastUpdate: new Date().toISOString(),
