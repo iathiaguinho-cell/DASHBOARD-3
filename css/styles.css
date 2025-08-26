@@ -285,4 +285,26 @@ body {
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e2e8f0;
 }
+/* =============== INDICADOR DE PRIORIDADE =============== */
+.priority-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
 
+.priority-indicator.priority-vermelho {
+  background-color: #ef4444; /* red-500 */
+}
+
+.priority-indicator.priority-amarelo {
+  background-color: #f59e0b; /* amber-500 */
+}
+
+.priority-indicator.priority-verde {
+  background-color: #22c55e; /* green-500 */
+}
