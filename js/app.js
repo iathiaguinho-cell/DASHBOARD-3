@@ -13,12 +13,6 @@ const firebaseConfig = {
 };
 
 /* ==================================================================
-CONFIGURAÇÃO DO IMGBB
-==================================================================
-*/
-const imgbbApiKey = "57cb1c5a02fb6e5ef2700543d6245b70";
-
-/* ==================================================================
 SISTEMA DE NOTIFICAÇÕES
 ==================================================================
 */
@@ -116,14 +110,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
     kanbanBoard.innerHTML = STATUS_LIST.map(status => {
       const isCollapsed = collapsedState[status];
-      const isDeliveredColumn = status === 'Entregue';
       
-      const searchInputHTML = isDeliveredColumn ? `
+      // ALTERAÇÃO 1: O campo de busca agora é criado para TODAS as colunas.
+      const searchInputHTML = `
         <div class="my-2">
-          <input type="search" id="searchDeliveredInput" placeholder="Buscar por Placa..." 
-                 class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <input type="search" data-status="${status}" placeholder="Buscar por Placa..." 
+                 class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 search-input">
         </div>
-      ` : '';
+      `;
       
       const columnLedHTML = isCollapsed ? `<div class="column-led ml-2"></div>` : '';
       
@@ -188,13 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const list = kanbanBoard.querySelector('.vehicle-list[data-status="Entregue"]');
       if (!list) return;
 
-      const searchInput = document.getElementById('searchDeliveredInput');
+      const searchInput = kanbanBoard.querySelector('.search-input[data-status="Entregue"]');
       const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
       
       let deliveredItems = Object.values(allServiceOrders).filter(os => os.status === 'Entregue');
 
       if (searchTerm) {
-          deliveredItems = deliveredItems.filter(os => os.placa.toUpperCase().includes(searchTerm));
+          deliveredItems = deliveredItems.filter(os => os.placa.toUpperCase().includes(searchTerm) || os.modelo.toUpperCase().includes(searchTerm));
       }
 
       deliveredItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -667,42 +661,18 @@ document.addEventListener('DOMContentLoaded', () => {
     printWindow.document.close();
   };
   
-  const uploadToImgBB = async (file) => {
-      const formData = new FormData();
-      formData.append('image', file);
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-          method: 'POST',
-          body: formData,
-      });
-      if (!response.ok) {
-          throw new Error(`Erro no upload da imagem: ${response.statusText}`);
-      }
-      const data = await response.json();
-      if (data.success) {
-          return data.data.url;
-      } else {
-          throw new Error(data.error.message || 'Falha ao obter URL da imagem.');
-      }
-  };
-
-  const uploadToGofile = async (file) => {
-      const serverResponse = await fetch(`https://api.gofile.io/getServer`);
-      if (!serverResponse.ok) throw new Error('Não foi possível conectar ao servidor de arquivos.');
-      const serverData = await serverResponse.json();
-      if (serverData.status !== 'ok') throw new Error('Servidor de arquivos indisponível.');
-      const server = serverData.data.server;
-
-      const formData = new FormData();
-      formData.append('file', file);
-      const uploadResponse = await fetch(`https://${server}.gofile.io/uploadFile`, {
-          method: 'POST',
-          body: formData,
-      });
-      if (!uploadResponse.ok) throw new Error('Erro durante o upload do PDF.');
-      const uploadData = await uploadResponse.json();
-      if (uploadData.status !== 'ok') throw new Error('Falha ao processar o PDF no servidor.');
-      
-      return uploadData.data.downloadPage;
+  const uploadFileToFirebase = async (file, osId) => {
+    const storage = firebase.storage();
+    const filePath = `media/${osId}/${Date.now()}-${file.name}`;
+    const fileRef = storage.ref(filePath);
+    try {
+        const snapshot = await fileRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        return downloadURL;
+    } catch (error) {
+        console.error("Erro no upload para o Firebase Storage:", error);
+        throw new Error(`Erro no upload do arquivo: ${file.name}`);
+    }
   };
   
   const openLightbox = (index) => {
@@ -800,9 +770,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ALTERAÇÃO 2: Lógica de busca atualizada para funcionar em TODAS as colunas.
   kanbanBoard.addEventListener('input', (e) => {
-      if (e.target.id === 'searchDeliveredInput') {
-          renderDeliveredColumn();
+      if (e.target.matches('.search-input')) {
+          const status = e.target.dataset.status;
+          const searchTerm = e.target.value.toUpperCase().trim();
+
+          // A coluna "Entregue" tem uma lógica especial porque pode ter muitos itens
+          if (status === 'Entregue') {
+              renderDeliveredColumn();
+              return;
+          }
+
+          // Para as outras colunas, a lógica é mais simples: apenas mostra ou esconde os cards
+          const columnList = kanbanBoard.querySelector(`.vehicle-list[data-status="${status}"]`);
+          const cards = columnList.querySelectorAll('.vehicle-card');
+
+          cards.forEach(card => {
+              const placa = card.querySelector('.font-bold').textContent.toUpperCase();
+              const modelo = card.querySelector('.text-sm').textContent.toUpperCase();
+              
+              if (placa.includes(searchTerm) || modelo.includes(searchTerm)) {
+                  card.style.display = ''; // Mostra o card
+              } else {
+                  card.style.display = 'none'; // Esconde o card
+              }
+          });
       }
   });
   
@@ -894,13 +887,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filesToUpload && filesToUpload.length > 0) {
             submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Enviando mídia...`;
             
-            const mediaPromises = filesToUpload.map(file => {
-                if (file.type === 'application/pdf') {
-                    return uploadToGofile(file).then(url => ({ type: file.type, url: url, timestamp: new Date().toISOString() }));
-                } else {
-                    return uploadToImgBB(file).then(url => ({ type: file.type, url: url, timestamp: new Date().toISOString() }));
-                }
-            });
+            const mediaPromises = filesToUpload.map(file => 
+                uploadFileToFirebase(file, osId).then(url => ({ 
+                    type: file.type, 
+                    url: url, 
+                    name: file.name,
+                    timestamp: new Date().toISOString() 
+                }))
+            );
 
             const mediaResults = await Promise.all(mediaPromises);
             const mediaRef = db.ref(`serviceOrders/${osId}/media`);
