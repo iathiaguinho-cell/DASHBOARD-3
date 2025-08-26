@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard Oficina - Gestão de Pátio</title>
   
-  <!-- Adições para PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#ffffff">
 
@@ -15,7 +14,6 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-gray-100">
-  <!-- TELA DE LOGIN POR USUÁRIO -->
   <div id="userScreen" class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
       <h1 class="text-3xl font-bold text-gray-800 mb-2">CHEVRON</h1>
@@ -25,7 +23,6 @@
     </div>
   </div>
 
-  <!-- APP PRINCIPAL -->
   <div id="app" class="hidden">
     <header class="bg-white shadow-md sticky top-0 z-40">
       <div id="attention-panel-container">
@@ -59,7 +56,6 @@
     </main>
   </div>
 
-  <!-- MODAL PARA CRIAR/EDITAR O.S. -->
   <div id="osModal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div class="modal-content w-full max-w-lg">
       <div class="modal-header">
@@ -99,6 +95,23 @@
               <label for="osObservacoes" class="block text-sm font-medium text-gray-700 mb-1">Observações Iniciais / Queixa do Cliente</label>
               <textarea id="osObservacoes" placeholder="Ex: Barulho no motor, vazamento de óleo..." rows="3" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
             </div>
+            <div class="form-group sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Urgência do Orçamento</label>
+                <div class="flex items-center space-x-6">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="osPrioridade" value="verde" class="form-radio h-5 w-5 text-green-600" checked>
+                        <span class="text-sm font-medium text-gray-700">Verde (Normal)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="osPrioridade" value="amarelo" class="form-radio h-5 w-5 text-yellow-500">
+                        <span class="text-sm font-medium text-gray-700">Amarelo (Urgente)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="osPrioridade" value="vermelho" class="form-radio h-5 w-5 text-red-600">
+                        <span class="text-sm font-medium text-gray-700">Vermelho (Imediato)</span>
+                    </label>
+                </div>
+            </div>
           </div>
         </form>
       </div>
@@ -109,7 +122,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE DETALHES DA O.S. -->
   <div id="detailsModal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div class="modal-content w-full max-w-6xl">
       <div class="modal-header">
@@ -121,7 +133,6 @@
       
       <div class="modal-body">
         <div class="os-details-container">
-          <!-- CABEÇALHO COM INFORMAÇÕES PRINCIPAIS -->
           <div class="os-header">
              <div class="flex justify-between items-start flex-wrap">
                 <div class="mb-4">
@@ -141,28 +152,22 @@
                 </div>
             </div>
             <div id="detailsObservacoes" class="hidden mt-4 pt-4 border-t border-gray-200">
-                <!-- Conteúdo injetado pelo JS -->
-            </div>
+                </div>
           </div>
           
-          <!-- CONTEÚDO PRINCIPAL -->
           <div class="os-content">
-            <!-- COLUNA ESQUERDA (Conteúdo que rola) -->
             <div class="space-y-6">
-              <!-- SEÇÃO DE MÍDIA -->
               <div class="bg-white rounded-lg shadow p-4">
                 <h3 class="section-title">Galeria de Mídia</h3>
                 <div id="thumbnail-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-4"></div>
               </div>
               
-              <!-- SEÇÃO DE HISTÓRICO -->
               <div class="bg-white rounded-lg shadow p-4">
                 <h3 class="section-title">Histórico da O.S.</h3>
                 <div id="timelineContainer" class="timeline mt-4 space-y-6"></div>
               </div>
             </div>
             
-            <!-- COLUNA DIREITA (Ações fixas) -->
             <div class="os-actions-section space-y-6">
               <div class="bg-white rounded-lg shadow p-4">
                   <h3 class="section-title">Adicionar Atualização</h3>
@@ -182,7 +187,6 @@
                                 <i class='bx bxs-image-add'></i> Galeria
                             </button>
                         </div>
-                      <!-- ATUALIZAÇÃO PARA ACEITAR PDF -->
                       <input id="media-input" type="file" class="hidden" multiple accept="image/*,video/*,application/pdf">
                       <p id="fileName" class="text-sm text-gray-500 mt-1 truncate"></p>
                     </div>
@@ -206,7 +210,6 @@
                     </div>
                   </form>
               </div>
-              <!-- NOVO BOTÃO DE EXPORTAR -->
               <div class="bg-white rounded-lg shadow p-4">
                   <button id="exportOsBtn" class="w-full btn bg-gray-700 hover:bg-gray-800 text-white">
                     <i class='bx bx-printer'></i> Exportar / Imprimir O.S.
@@ -224,7 +227,6 @@
     </div>
   </div>
 
-  <!-- LIGHTBOX PARA VISUALIZAÇÃO DE MÍDIA -->
   <div id="lightbox" class="modal fixed inset-0 z-[100] hidden items-center justify-center p-4">
     <div class="absolute inset-0" id="lightbox-close-bg"></div>
     <div class="relative bg-black bg-opacity-50 p-4 rounded-lg max-w-4xl w-full">
@@ -239,7 +241,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
   <div id="confirmDeleteModal" class="modal fixed inset-0 z-[101] hidden items-center justify-center p-4">
     <div class="modal-content w-full max-w-md">
         <div class="modal-header">
@@ -256,12 +257,11 @@
   </div>
 
 
-  <!-- SCRIPTS -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="js/app.js"></script>
 
-  <!-- Script para registrar o Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
