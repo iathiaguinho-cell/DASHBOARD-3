@@ -259,15 +259,14 @@ body {
 
 .os-content {
   display: grid;
-  grid-template-columns: 1fr; /* Layout de uma coluna para mobile */
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   align-items: start;
 }
 
-/* A partir de 1024px (telas grandes), muda para duas colunas */
 @media (min-width: 1024px) {
   .os-content {
-    grid-template-columns: 1fr 400px; /* Coluna de ações com 400px */
+    grid-template-columns: 1fr 400px;
   }
 }
 
@@ -283,28 +282,4 @@ body {
   color: #1e293b;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-/* =============== INDICADOR DE PRIORIDADE =============== */
-.priority-indicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-
-.priority-indicator.priority-vermelho {
-  background-color: #ef4444; /* red-500 */
-}
-
-.priority-indicator.priority-amarelo {
-  background-color: #f59e0b; /* amber-500 */
-}
-
-.priority-indicator.priority-verde {
-  background-color: #22c55e; /* green-500 */
-}
+  border-
