@@ -1,5 +1,5 @@
 /* ==================================================================
-CONFIGURAÇÃO DO FIREBASE
+CONFIGURAÇÃO DO FIREBASE (Banco de Dados)
 ==================================================================
 */
 const firebaseConfig = {
@@ -11,6 +11,13 @@ const firebaseConfig = {
   messagingSenderId: "736157192887",
   appId: "1:736157192887:web:c23d3daade848a33d67332"
 };
+
+/* ==================================================================
+CONFIGURAÇÃO DO CLOUDINARY (Armazenamento de Mídia)
+==================================================================
+*/
+const CLOUDINARY_CLOUD_NAME = "dfqdoome7"; 
+const CLOUDINARY_UPLOAD_PRESET = "pvjfvkvb";
 
 /* ==================================================================
 SISTEMA DE NOTIFICAÇÕES
@@ -40,7 +47,36 @@ function showNotification(message, type = 'success') {
 }
 
 /* ==================================================================
-INICIALIZAÇÃO DO SISTEMA
+LÓGICA DE UPLOAD DE ARQUIVOS (AGORA COM CLOUDINARY)
+==================================================================
+*/
+const uploadFileToCloudinary = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  try {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error.message || 'Falha no upload da mídia.');
+    }
+
+    const data = await response.json();
+    return data.secure_url; // Retorna a URL segura do arquivo
+  } catch (error) {
+    console.error("Erro no upload para o Cloudinary:", error);
+    throw error;
+  }
+};
+
+
+/* ==================================================================
+INICIALIZAÇÃO DO SISTEMA E DEMAIS FUNÇÕES
 ==================================================================
 */
 document.addEventListener('DOMContentLoaded', () => {
@@ -54,24 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let filesToUpload = [];
   let appStartTime = Date.now();
   
-  const USERS = [
-    { name: 'Augusto', role: 'Gestor' }, 
-    { name: 'William Barbosa', role: 'Atendente' },
-    { name: 'Thiago Ventura Valencio', role: 'Atendente' }, 
-    { name: 'Fernando', role: 'Mecânico' },
-    { name: 'Gustavo', role: 'Mecânico' }, 
-    { name: 'Marcelo', role: 'Mecânico' }
-  ];
-  
-  const STATUS_LIST = [
-    'Aguardando-Mecanico', 'Em-Analise', 'Orcamento-Enviado', 'Aguardando-Aprovacao',
-    'Servico-Autorizado', 'Em-Execucao', 'Finalizado-Aguardando-Retirada', 'Entregue'
-  ];
-  
-  const ATTENTION_STATUSES = {
-    'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow', blinkClass: 'blinking-aguardando' },
-    'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green', blinkClass: 'blinking-autorizado' }
-  };
+  const USERS = [ { name: 'Augusto', role: 'Gestor' }, { name: 'William Barbosa', role: 'Atendente' }, { name: 'Thiago Ventura Valencio', role: 'Atendente' }, { name: 'Fernando', role: 'Mecânico' }, { name: 'Gustavo', role: 'Mecânico' }, { name: 'Marcelo', role: 'Mecânico' } ];
+  const STATUS_LIST = [ 'Aguardando-Mecanico', 'Em-Analise', 'Orcamento-Enviado', 'Aguardando-Aprovacao', 'Servico-Autorizado', 'Em-Execucao', 'Finalizado-Aguardando-Retirada', 'Entregue' ];
+  const ATTENTION_STATUSES = { 'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow', blinkClass: 'blinking-aguardando' }, 'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green', blinkClass: 'blinking-autorizado' } };
   const LED_TRIGGER_STATUSES = ['Aguardando-Mecanico', 'Servico-Autorizado'];
   
   const userScreen = document.getElementById('userScreen');
@@ -106,25 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
     kanbanBoard.innerHTML = STATUS_LIST.map(status => {
       const isCollapsed = collapsedState[status];
-      const searchInputHTML = `
-        <div class="my-2">
-          <input type="search" data-status="${status}" placeholder="Buscar por Placa..." 
-                 class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 search-input">
-        </div>
-      `;
-      const columnLedHTML = isCollapsed ? `<div class="column-led ml-2"></div>` : '';
-      return `
-        <div class="status-column p-4">
-          <div class="flex justify-between items-center cursor-pointer toggle-column-btn mb-2" data-status="${status}">
-            <div class="flex items-center">
-              <h3 class="font-bold text-gray-800">${formatStatus(status)}</h3>
-              ${columnLedHTML}
-            </div>
-            <i class='bx bxs-chevron-down transition-transform ${isCollapsed ? 'rotate-180' : ''}'></i>
-          </div>
-          ${searchInputHTML}
-          <div class="space-y-3 vehicle-list ${isCollapsed ? 'collapsed' : ''}" data-status="${status}"></div>
-        </div>`;
+      const searchInputHTML = `<div class="my-2"><input type="search" data-status="${status}" placeholder="Buscar por Placa..." class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 search-input"></div>`;
+      const columnLedHTML = isCollapsed ? '<div class="column-led ml-2"></div>' : '';
+      return `<div class="status-column p-4"><div class="flex justify-between items-center cursor-pointer toggle-column-btn mb-2" data-status="${status}"><div class="flex items-center"><h3 class="font-bold text-gray-800">${formatStatus(status)}</h3>${columnLedHTML}</div><i class='bx bxs-chevron-down transition-transform ${isCollapsed ? 'rotate-180' : ''}'></i></div>${searchInputHTML}<div class="space-y-3 vehicle-list ${isCollapsed ? 'collapsed' : ''}" data-status="${status}"></div></div>`;
     }).join('');
     updateAttentionPanel();
   };
@@ -136,31 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevButton = prevStatus ? `<button data-os-id="${os.id}" data-new-status="${prevStatus}" class="btn-move-status p-2 rounded-full hover:bg-gray-100 transition-colors"><i class='bx bx-chevron-left text-xl text-gray-600'></i></button>` : `<div class="w-10 h-10"></div>`;
     const nextButton = nextStatus ? `<button data-os-id="${os.id}" data-new-status="${nextStatus}" class="btn-move-status p-2 rounded-full hover:bg-gray-100 transition-colors"><i class='bx bx-chevron-right text-xl text-gray-600'></i></button>` : `<div class="w-10 h-10"></div>`;
     let responsibleInfo = `<p class="text-xs text-gray-500 mt-1">Atendente: ${os.responsible || 'N/D'}</p>`;
-    if (os.status === 'Em-Execucao' && os.responsibleForService) {
-        responsibleInfo = `<p class="text-xs text-red-600 font-medium mt-1">Mecânico: ${os.responsibleForService}</p>`;
-    } else if (os.status === 'Em-Analise' && os.responsibleForBudget) {
-        responsibleInfo = `<p class="text-xs text-purple-600 font-medium mt-1">Orçamento: ${os.responsibleForBudget}</p>`;
-    }
+    if (os.status === 'Em-Execucao' && os.responsibleForService) { responsibleInfo = `<p class="text-xs text-red-600 font-medium mt-1">Mecânico: ${os.responsibleForService}</p>`; }
+    else if (os.status === 'Em-Analise' && os.responsibleForBudget) { responsibleInfo = `<p class="text-xs text-purple-600 font-medium mt-1">Orçamento: ${os.responsibleForBudget}</p>`; }
     const kmInfo = `<p class="text-xs text-gray-500">KM: ${os.km ? new Intl.NumberFormat('pt-BR').format(os.km) : 'N/A'}</p>`;
     const priorityIndicatorHTML = os.priority ? `<div class="priority-indicator priority-${os.priority}" title="Urgência: ${os.priority}"></div>` : '';
-    return `
-      <div id="${os.id}" class="vehicle-card status-${os.status}" data-os-id="${os.id}">
-        ${priorityIndicatorHTML}
-        <div class="flex justify-between items-start">
-            <div class="card-clickable-area cursor-pointer flex-grow">
-              <p class="font-bold text-base text-gray-800">${os.placa}</p>
-              <p class="text-sm text-gray-600">${os.modelo}</p>
-              <div class="text-xs mt-1">${kmInfo}</div>
-              <div class="text-xs">${responsibleInfo}</div>
-            </div>
-            <div class="flex flex-col -mt-1 -mr-1">
-                ${nextButton}
-                ${prevButton}
-            </div>
-        </div>
-      </div>`;
+    return `<div id="${os.id}" class="vehicle-card status-${os.status}" data-os-id="${os.id}">${priorityIndicatorHTML}<div class="flex justify-between items-start"><div class="card-clickable-area cursor-pointer flex-grow"><p class="font-bold text-base text-gray-800">${os.placa}</p><p class="text-sm text-gray-600">${os.modelo}</p><div class="text-xs mt-1">${kmInfo}</div><div class="text-xs">${responsibleInfo}</div></div><div class="flex flex-col -mt-1 -mr-1">${nextButton}${prevButton}</div></div></div>`;
   };
-
+  
   const renderDeliveredColumn = () => {
       const list = kanbanBoard.querySelector('.vehicle-list[data-status="Entregue"]');
       if (!list) return;
@@ -183,9 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDeliveredColumn();
       } else {
         const list = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
-        if (list) {
-          list.insertAdjacentHTML('beforeend', createCardHTML(os));
-        }
+        if (list) { list.insertAdjacentHTML('beforeend', createCardHTML(os)); }
       }
       updateAttentionPanel();
     });
@@ -202,9 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const newList = kanbanBoard.querySelector(`.vehicle-list[data-status="${os.status}"]`);
           if (newList) newList.insertAdjacentHTML('beforeend', createCardHTML(os));
         }
-        if(oldOs.status === 'Entregue') {
-            renderDeliveredColumn();
-        }
+        if(oldOs.status === 'Entregue') { renderDeliveredColumn(); }
       } 
       else if (existingCard) {
         if (os.status === 'Entregue') {
@@ -232,9 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateAttentionPanel = () => {
     let vehiclesTriggeringAlert = new Set();
     Object.values(allServiceOrders).forEach(os => {
-        if (LED_TRIGGER_STATUSES.includes(os.status)) {
-            vehiclesTriggeringAlert.add(os.id);
-        }
+        if (LED_TRIGGER_STATUSES.includes(os.status)) { vehiclesTriggeringAlert.add(os.id); }
     });
     attentionPanel.innerHTML = Object.entries(ATTENTION_STATUSES).map(([statusKey, config]) => {
         const vehiclesInStatus = Object.values(allServiceOrders).filter(os => os.status === statusKey);
@@ -243,14 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const vehicleListHTML = hasVehicles 
             ? vehiclesInStatus.map(os => `<p class="cursor-pointer attention-vehicle text-white hover:text-blue-300" data-os-id="${os.id}">${os.placa} - ${os.modelo}</p>`).join('')
             : `<p class="text-gray-400">- Vazio -</p>`;
-        return `
-            <div class="attention-box p-2 rounded-md bg-gray-900 border-2 border-gray-700 ${blinkingClass}" data-status-key="${statusKey}">
-                <h3 class="text-center text-${config.color}-400 font-bold text-xs sm:text-sm truncate">${config.label}</h3>
-                <div class="mt-1 text-center text-white text-xs space-y-1 h-16 overflow-y-auto">
-                    ${vehicleListHTML}
-                </div>
-            </div>
-        `;
+        return `<div class="attention-box p-2 rounded-md bg-gray-900 border-2 border-gray-700 ${blinkingClass}" data-status-key="${statusKey}"><h3 class="text-center text-${config.color}-400 font-bold text-xs sm:text-sm truncate">${config.label}</h3><div class="mt-1 text-center text-white text-xs space-y-1 h-16 overflow-y-auto">${vehicleListHTML}</div></div>`;
     }).join('');
     updateLedState(vehiclesTriggeringAlert);
   };
@@ -271,9 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (storedUser) loginUser(JSON.parse(storedUser));
     else {
       userList.innerHTML = USERS.map(user =>
-        `<div class="p-4 bg-gray-100 rounded-lg hover:bg-blue-100 cursor-pointer user-btn transition-all duration-200" data-user='${JSON.stringify(user)}'>
-          <p class="font-semibold">${user.name}</p><p class="text-sm text-gray-500">${user.role}</p>
-        </div>`
+        `<div class="p-4 bg-gray-100 rounded-lg hover:bg-blue-100 cursor-pointer user-btn transition-all duration-200" data-user='${JSON.stringify(user)}'><p class="font-semibold">${user.name}</p><p class="text-sm text-gray-500">${user.role}</p></div>`
       ).join('');
     }
   };
@@ -281,11 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function sendTeamNotification(message) {
       if (!currentUser) return;
       const notificationRef = db.ref('notifications').push();
-      notificationRef.set({
-          message: message,
-          user: currentUser.name,
-          timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
+      notificationRef.set({ message: message, user: currentUser.name, timestamp: firebase.database.ServerValue.TIMESTAMP });
   }
 
   function listenToNotifications() {
@@ -311,20 +279,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const os = allServiceOrders[osId];
     if (!os) return;
     const oldStatus = os.status;
-    const logEntry = {
-        timestamp: new Date().toISOString(),
-        user: currentUser.name,
-        description: `Status alterado de "${formatStatus(oldStatus)}" para "${formatStatus(newStatus)}".`,
-        type: 'status'
-    };
+    const logEntry = { timestamp: new Date().toISOString(), user: currentUser.name, description: `Status alterado de "${formatStatus(oldStatus)}" para "${formatStatus(newStatus)}".`, type: 'status' };
     const updates = { status: newStatus, lastUpdate: new Date().toISOString() };
     if (newStatus === 'Em-Analise') updates.responsibleForBudget = currentUser.name;
     else if (newStatus === 'Em-Execucao') updates.responsibleForService = currentUser.name;
     else if (newStatus === 'Entregue') updates.responsibleForDelivery = currentUser.name;
     try {
-        const logsRef = db.ref(`serviceOrders/${osId}/logs`);
-        const newLogRef = logsRef.push();
-        await newLogRef.set(logEntry);
+        await db.ref(`serviceOrders/${osId}/logs`).push().set(logEntry);
         await db.ref(`serviceOrders/${osId}`).update(updates);
         sendTeamNotification(`O.S. ${os.placa} movida para ${formatStatus(newStatus)} por ${currentUser.name}`);
     } catch (error) {
@@ -366,9 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTimeline(os);
     renderMediaGallery(os);
     const existingSignature = detailsModal.querySelector('.dev-signature-modal');
-    if (existingSignature) {
-        existingSignature.remove();
-    }
+    if (existingSignature) { existingSignature.remove(); }
     const actionsSection = detailsModal.querySelector('.os-actions-section');
     if (actionsSection) {
         const signatureDiv = document.createElement('div');
@@ -382,20 +341,15 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const renderTimeline = (os) => {
     const timelineContainer = document.getElementById('timelineContainer');
-    const logs = os.logs || [];
+    const logs = os.logs || {};
     timelineContainer.innerHTML = Object.values(logs).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(log => {
       const date = new Date(log.timestamp);
       const formattedDate = date.toLocaleDateString('pt-BR');
       const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       let iconClass = 'bx-message-detail';
       let itemClass = 'timeline-item-log';
-      if (log.type === 'status') {
-        iconClass = 'bx-transfer';
-        itemClass = 'timeline-item-status';
-      } else if (log.value) {
-        iconClass = 'bx-dollar';
-        itemClass = 'timeline-item-value';
-      }
+      if (log.type === 'status') { iconClass = 'bx-transfer'; itemClass = 'timeline-item-status'; }
+      else if (log.value) { iconClass = 'bx-dollar'; itemClass = 'timeline-item-value'; }
       return `<div class="timeline-item ${itemClass}"><div class="timeline-icon"><i class='bx ${iconClass}'></i></div><div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-start mb-1"><h4 class="font-semibold text-gray-800 text-sm">${log.user}</h4><span class="text-xs text-gray-500">${formattedDate} ${formattedTime}</span></div><p class="text-gray-700 text-sm">${log.description}</p>${log.parts ? `<p class="text-gray-600 text-xs mt-1"><strong>Peças:</strong> ${log.parts}</p>` : ''}${log.value ? `<p class="text-green-600 text-xs mt-1"><strong>Valor:</strong> R$ ${parseFloat(log.value).toFixed(2)}</p>` : ''}</div></div>`;
     }).join('');
     if (Object.keys(logs).length === 0) {
@@ -412,13 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const isVideo = item.type.startsWith('video/');
         const isPdf = item.type === 'application/pdf';
         let thumbnailContent = `<i class='bx bx-file text-4xl text-gray-500'></i>`; 
-        if (isImage) {
-            thumbnailContent = `<img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy" class="w-full h-full object-cover">`;
-        } else if (isVideo) {
-            thumbnailContent = `<i class='bx bx-play-circle text-4xl text-blue-500'></i>`;
-        } else if (isPdf) {
-            thumbnailContent = `<i class='bx bxs-file-pdf text-4xl text-red-500'></i>`;
-        }
+        if (isImage) { thumbnailContent = `<img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy" class="w-full h-full object-cover">`; }
+        else if (isVideo) { thumbnailContent = `<i class='bx bx-play-circle text-4xl text-blue-500'></i>`; }
+        else if (isPdf) { thumbnailContent = `<i class='bx bxs-file-pdf text-4xl text-red-500'></i>`; }
         return `<div class="aspect-square bg-gray-200 rounded-md overflow-hidden cursor-pointer thumbnail-item flex items-center justify-center" data-index="${index}">${thumbnailContent}</div>`;
     }).join('');
     if (lightboxMedia.length === 0) {
@@ -428,21 +378,15 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const exportOsToPrint = (osId) => {
     const os = allServiceOrders[osId];
-    if (!os) {
-      showNotification('Dados da O.S. não encontrados.', 'error');
-      return;
-    }
+    if (!os) { showNotification('Dados da O.S. não encontrados.', 'error'); return; }
     const formatDate = (isoString) => {
         if (!isoString) return 'N/A';
-        const date = new Date(isoString);
-        return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        return new Date(isoString).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     };
     const logs = os.logs ? Object.values(os.logs).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)) : [];
     let totalValue = 0;
     const timelineHtml = logs.map(log => {
-        if (log.value) {
-            totalValue += parseFloat(log.value);
-        }
+        if (log.value) { totalValue += parseFloat(log.value); }
         return `<tr><td>${formatDate(log.timestamp)}</td><td>${log.user}</td><td>${log.description}</td><td>${log.parts || '---'}</td><td style="text-align: right;">${log.value ? `R$ ${parseFloat(log.value).toFixed(2)}` : '---'}</td></tr>`;
     }).join('');
     const media = os.media ? Object.values(os.media) : [];
@@ -454,31 +398,13 @@ document.addEventListener('DOMContentLoaded', () => {
     printWindow.document.close();
   };
   
-  const uploadFileToFirebase = async (file, osId) => {
-    const storage = firebase.storage();
-    const filePath = `media/${osId}/${Date.now()}-${file.name}`;
-    const fileRef = storage.ref(filePath);
-    try {
-        const snapshot = await fileRef.put(file);
-        const downloadURL = await snapshot.ref.getDownloadURL();
-        return downloadURL;
-    } catch (error) {
-        console.error("Erro no upload para o Firebase Storage:", error);
-        throw new Error(`Erro no upload do arquivo: ${file.name}`);
-    }
-  };
-  
   const openLightbox = (index) => {
     if (!lightboxMedia || lightboxMedia.length === 0) return;
     currentLightboxIndex = index;
     const media = lightboxMedia[index];
-    if (media.type === 'application/pdf') {
-        window.open(media.url, '_blank');
-        return;
-    }
+    if (media.type === 'application/pdf') { window.open(media.url, '_blank'); return; }
     const lightboxContent = document.getElementById('lightbox-content');
-    const isImage = media.type.startsWith('image/');
-    if (isImage) {
+    if (media.type.startsWith('image/')) {
       lightboxContent.innerHTML = `<img src="${media.url}" alt="Imagem" class="max-w-full max-h-full object-contain">`;
     } else {
       lightboxContent.innerHTML = `<video src="${media.url}" controls class="max-w-full max-h-full"></video>`;
@@ -492,12 +418,10 @@ document.addEventListener('DOMContentLoaded', () => {
     lightbox.classList.add('flex');
   };
   
+  // --- LISTENERS DE EVENTOS ---
   userList.addEventListener('click', (e) => {
     const userBtn = e.target.closest('.user-btn');
-    if (userBtn) {
-      const user = JSON.parse(userBtn.dataset.user);
-      loginUser(user);
-    }
+    if (userBtn) { loginUser(JSON.parse(userBtn.dataset.user)); }
   });
   
   logoutButton.addEventListener('click', () => {
@@ -509,17 +433,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   togglePanelBtn.addEventListener('click', () => {
     attentionPanelContainer.classList.toggle('collapsed');
-    const icon = togglePanelBtn.querySelector('i');
-    icon.classList.toggle('rotate-180');
+    togglePanelBtn.querySelector('i').classList.toggle('rotate-180');
     updateAttentionPanel();
   });
   
   attentionPanel.addEventListener('click', (e) => {
     const vehicleElement = e.target.closest('.attention-vehicle');
-    if (vehicleElement) {
-      const osId = vehicleElement.dataset.osId;
-      openDetailsModal(osId);
-    }
+    if (vehicleElement) { openDetailsModal(vehicleElement.dataset.osId); }
   });
   
   kanbanBoard.addEventListener('click', (e) => {
@@ -529,18 +449,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = e.target.closest('.toggle-column-btn');
     if (moveBtn) {
       e.stopPropagation();
-      const osId = moveBtn.dataset.osId;
-      const newStatus = moveBtn.dataset.newStatus;
-      updateServiceOrderStatus(osId, newStatus);
+      updateServiceOrderStatus(moveBtn.dataset.osId, moveBtn.dataset.newStatus);
     } else if (clickableArea && card) {
-      const osId = card.dataset.osId;
-      openDetailsModal(osId);
+      openDetailsModal(card.dataset.osId);
     } else if (toggleBtn) {
       const status = toggleBtn.dataset.status;
       const vehicleList = kanbanBoard.querySelector(`.vehicle-list[data-status="${status}"]`);
-      const icon = toggleBtn.querySelector('i');
       vehicleList.classList.toggle('collapsed');
-      icon.classList.toggle('rotate-180');
+      toggleBtn.querySelector('i').classList.toggle('rotate-180');
       const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
       collapsedState[status] = vehicleList.classList.contains('collapsed');
       localStorage.setItem('collapsedColumns', JSON.stringify(collapsedState));
@@ -572,22 +488,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   document.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-close-modal') || e.target.id === 'detailsModal') {
-      detailsModal.classList.add('hidden');
-    }
-     if (e.target.closest('.btn-close-modal') || e.target.id === 'osModal') {
-      osModal.classList.add('hidden');
-    }
+    if (e.target.closest('.btn-close-modal') || e.target.id === 'detailsModal') { detailsModal.classList.add('hidden'); }
+    if (e.target.closest('.btn-close-modal') || e.target.id === 'osModal') { osModal.classList.add('hidden'); }
   });
 
   detailsModal.addEventListener('click', (e) => {
     const exportBtn = e.target.closest('#exportOsBtn');
-    if (exportBtn) {
-        const osId = document.getElementById('logOsId').value;
-        if (osId) {
-            exportOsToPrint(osId);
-        }
-    }
+    if (exportBtn) { exportOsToPrint(document.getElementById('logOsId').value); }
   });
   
   addOSBtn.addEventListener('click', () => {
@@ -639,23 +546,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const description = document.getElementById('logDescricao').value;
     const parts = document.getElementById('logPecas').value;
     const value = document.getElementById('logValor').value;
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      user: currentUser.name,
-      description: description,
-      type: 'log',
-      parts: parts || null,
-      value: value || null
-    };
+    const logEntry = { timestamp: new Date().toISOString(), user: currentUser.name, description: description, type: 'log', parts: parts || null, value: value || null };
     try {
         if (filesToUpload && filesToUpload.length > 0) {
             submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Enviando mídia...`;
             const mediaPromises = filesToUpload.map(file => 
-                uploadFileToFirebase(file, osId).then(url => ({ 
-                    type: file.type, 
-                    url: url, 
-                    name: file.name,
-                    timestamp: new Date().toISOString() 
+                uploadFileToCloudinary(file).then(url => ({ 
+                    type: file.type, url: url, name: file.name, timestamp: new Date().toISOString() 
                 }))
             );
             const mediaResults = await Promise.all(mediaPromises);
@@ -684,28 +581,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-move-next').addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
-    const currentIndex = STATUS_LIST.indexOf(os.status);
-    const nextStatus = STATUS_LIST[currentIndex + 1];
-    if (nextStatus) {
-      updateServiceOrderStatus(osId, nextStatus);
-      detailsModal.classList.add('hidden');
-    }
+    const nextStatus = STATUS_LIST[STATUS_LIST.indexOf(os.status) + 1];
+    if (nextStatus) { updateServiceOrderStatus(osId, nextStatus); detailsModal.classList.add('hidden'); }
   });
   
   document.getElementById('btn-move-prev').addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
-    const currentIndex = STATUS_LIST.indexOf(os.status);
-    const prevStatus = STATUS_LIST[currentIndex - 1];
-    if (prevStatus) {
-      updateServiceOrderStatus(osId, prevStatus);
-      detailsModal.classList.add('hidden');
-    }
+    const prevStatus = STATUS_LIST[STATUS_LIST.indexOf(os.status) - 1];
+    if (prevStatus) { updateServiceOrderStatus(osId, prevStatus); detailsModal.classList.add('hidden'); }
   });
   
-  document.getElementById('btn-stay').addEventListener('click', () => {
-    postLogActions.style.display = 'none';
-  });
+  document.getElementById('btn-stay').addEventListener('click', () => { postLogActions.style.display = 'none'; });
   
   kmUpdateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -713,15 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const newKm = parseInt(document.getElementById('updateKmInput').value);
     if (newKm && newKm > 0) {
       await db.ref(`serviceOrders/${osId}/km`).set(newKm);
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        user: currentUser.name,
-        description: `KM do veículo atualizado para ${new Intl.NumberFormat('pt-BR').format(newKm)} km.`,
-        type: 'log'
-      };
-      const logsRef = db.ref(`serviceOrders/${osId}/logs`);
-      const newLogRef = logsRef.push();
-      await newLogRef.set(logEntry);
+      const logEntry = { timestamp: new Date().toISOString(), user: currentUser.name, description: `KM do veículo atualizado para ${new Intl.NumberFormat('pt-BR').format(newKm)} km.`, type: 'log' };
+      await db.ref(`serviceOrders/${osId}/logs`).push().set(logEntry);
       document.getElementById('updateKmInput').value = '';
       showNotification('KM atualizado e registrado no histórico!', 'success');
       sendTeamNotification(`KM da O.S. ${allServiceOrders[osId].placa} atualizado para ${newKm} por ${currentUser.name}`);
@@ -783,9 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   mediaInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        filesToUpload.push(...e.target.files);
-    }
+    if (e.target.files.length > 0) { filesToUpload.push(...e.target.files); }
     if (filesToUpload.length > 0) {
       document.getElementById('fileName').textContent = `${filesToUpload.length} arquivo(s) na fila`;
     } else {
@@ -801,30 +679,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   document.getElementById('lightbox-prev').addEventListener('click', () => {
-    if (currentLightboxIndex > 0) {
-      openLightbox(currentLightboxIndex - 1);
-    }
+    if (currentLightboxIndex > 0) { openLightbox(currentLightboxIndex - 1); }
   });
   
   document.getElementById('lightbox-next').addEventListener('click', () => {
-    if (currentLightboxIndex < lightboxMedia.length - 1) {
-      openLightbox(currentLightboxIndex + 1);
-    }
+    if (currentLightboxIndex < lightboxMedia.length - 1) { openLightbox(currentLightboxIndex + 1); }
   });
   
-  document.getElementById('lightbox-close').addEventListener('click', () => {
-    lightbox.classList.add('hidden');
-  });
-  
-  document.getElementById('lightbox-close-bg').addEventListener('click', () => {
-    lightbox.classList.add('hidden');
-  });
+  document.getElementById('lightbox-close').addEventListener('click', () => { lightbox.classList.add('hidden'); });
+  document.getElementById('lightbox-close-bg').addEventListener('click', () => { lightbox.classList.add('hidden'); });
   
   document.getElementById('lightbox-copy').addEventListener('click', () => {
     const media = lightboxMedia[currentLightboxIndex];
-    navigator.clipboard.writeText(media.url).then(() => {
-      showNotification('URL copiada para a área de transferência!');
-    });
+    navigator.clipboard.writeText(media.url).then(() => { showNotification('URL copiada para a área de transferência!'); });
   });
   
   checkLoggedInUser();
