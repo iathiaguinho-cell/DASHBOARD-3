@@ -48,6 +48,11 @@ body {
   z-index: 10;
 }
 
+.vehicle-card.highlight {
+  outline: 2px solid #3b82f6;
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
+}
+
 /* CORES POR STATUS */
 .vehicle-card.status-Aguardando-Mecanico { border-left-color: #f59e0b; }
 .vehicle-card.status-Em-Analise { border-left-color: #8b5cf6; }
@@ -145,6 +150,31 @@ body {
 .timeline-item-status .timeline-icon { border-color: #10b981; color: #10b981; }
 .timeline-item-value .timeline-icon { border-color: #f59e0b; color: #f59e0b; }
 
+.delete-log-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.5;
+}
+
+.timeline-item:hover .delete-log-btn {
+  opacity: 1;
+}
+
+.delete-log-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
 /* =============== PAINEL DE ALERTA =============== */
 #attention-panel-container { 
   transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out; 
@@ -192,6 +222,21 @@ body {
 #lightbox img, #lightbox video { 
   max-height: 80vh; 
   max-width: 80vw; 
+}
+
+/* =============== BUSCA UNIVERSAL =============== */
+.search-result-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb; /* gray-200 */
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: #f3f4f6; /* gray-100 */
 }
 
 /* =============== INDICADORES VISUAIS =============== */
