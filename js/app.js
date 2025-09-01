@@ -16,7 +16,7 @@ const firebaseConfig = {
 CONFIGURAÇÃO DO CLOUDINARY (Armazenamento de Mídia)
 ==================================================================
 */
-const CLOUDINARY_CLOUD_NAME = "dfqdoome7"; 
+const CLOUDINARY_CLOUD_NAME = "dfqdoome7";
 const CLOUDINARY_UPLOAD_PRESET = "pvjfvkvb";
 
 /* ==================================================================
@@ -82,22 +82,34 @@ INICIALIZAÇÃO DO SISTEMA E DEMAIS FUNÇÕES
 document.addEventListener('DOMContentLoaded', () => {
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
-  
+
   let currentUser = null;
   let allServiceOrders = {};
   let lightboxMedia = [];
   let currentLightboxIndex = 0;
   let filesToUpload = [];
   let appStartTime = Date.now();
-  
-  const USERS = [ { name: 'Augusto', role: 'Gestor' }, { name: 'William Barbosa', role: 'Atendente' }, { name: 'Thiago Ventura Valencio', role: 'Atendente' }, { name: 'Fernando', role: 'Mecânico' }, { name: 'Gustavo', role: 'Mecânico' }, { name: 'Marcelo', role: 'Mecânico' } ];
+
+  const USERS = [
+    { name: 'Augusto', role: 'Gestor', password: 'jose' },
+    { name: 'William Barbosa', role: 'Atendente', password: '2312' },
+    { name: 'Thiago Ventura Valencio', role: 'Atendente', password: '1940' },
+    { name: 'Fernando', role: 'Mecânico', password: 'fernando' },
+    { name: 'Gustavo', role: 'Mecânico', password: 'gustavo' },
+    { name: 'Marcelo', role: 'Mecânico', password: 'marcelo' }
+  ];
+
   const STATUS_LIST = [ 'Aguardando-Mecanico', 'Em-Analise', 'Orcamento-Enviado', 'Aguardando-Aprovacao', 'Servico-Autorizado', 'Em-Execucao', 'Finalizado-Aguardando-Retirada', 'Entregue' ];
   const ATTENTION_STATUSES = { 'Aguardando-Mecanico': { label: 'AGUARDANDO MECÂNICO', color: 'yellow', blinkClass: 'blinking-aguardando' }, 'Servico-Autorizado': { label: 'SERVIÇO AUTORIZADO', color: 'green', blinkClass: 'blinking-autorizado' } };
   const LED_TRIGGER_STATUSES = ['Aguardando-Mecanico', 'Servico-Autorizado'];
-  
+
+  // Seletores de elementos DOM
   const userScreen = document.getElementById('userScreen');
   const app = document.getElementById('app');
-  const userList = document.getElementById('userList');
+  const loginForm = document.getElementById('loginForm');
+  const userSelect = document.getElementById('userSelect');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginError = document.getElementById('loginError');
   const kanbanBoard = document.getElementById('kanbanBoard');
   const addOSBtn = document.getElementById('addOSBtn');
   const logoutButton = document.getElementById('logoutButton');
@@ -120,14 +132,81 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmDeleteText = document.getElementById('confirmDeleteText');
   const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
   const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-  
+  const globalSearchInput = document.getElementById('globalSearchInput');
+  const globalSearchResults = document.getElementById('globalSearchResults');
+  const timelineContainer = document.getElementById('timelineContainer');
+  const confirmDeleteLogModal = document.getElementById('confirmDeleteLogModal');
+  const confirmDeleteLogText = document.getElementById('confirmDeleteLogText');
+  const cancelDeleteLogBtn = document.getElementById('cancelDeleteLogBtn');
+  const confirmDeleteLogBtn = document.getElementById('confirmDeleteLogBtn');
+
+
   const formatStatus = (status) => status.replace(/-/g, ' ');
+
+  const logoutUser = () => {
+    localStorage.removeItem('currentUser');
+    location.reload();
+  };
+
+  const scheduleDailyLogout = () => {
+    const now = new Date();
+    const logoutTime = new Date();
+
+    logoutTime.setHours(19, 0, 0, 0);
+
+    if (now > logoutTime) {
+      logoutTime.setDate(logoutTime.getDate() + 1);
+    }
+
+    const timeUntilLogout = logoutTime.getTime() - now.getTime();
+
+    console.log(`Logout automático agendado para: ${logoutTime.toLocaleString('pt-BR')}`);
+
+    setTimeout(() => {
+      if (localStorage.getItem('currentUser')) {
+        showNotification('Sessão encerrada por segurança.', 'success');
+        setTimeout(logoutUser, 2000);
+      }
+    }, timeUntilLogout);
+  };
+
+  const loginUser = (user) => {
+    currentUser = user;
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    document.getElementById('currentUserName').textContent = user.name;
+    userScreen.classList.add('hidden');
+    app.classList.remove('hidden');
+    initializeKanban();
+    listenToServiceOrders();
+    listenToNotifications();
+    scheduleDailyLogout();
+  };
+
+  const initializeLoginScreen = () => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+        loginUser(JSON.parse(storedUser));
+        return;
+    }
+
+    userScreen.classList.remove('hidden');
+    app.classList.add('hidden');
+    userSelect.innerHTML = '<option value="">Selecione seu usuário...</option>';
+    USERS.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.name;
+        option.textContent = user.name;
+        userSelect.appendChild(option);
+    });
+  };
 
   const initializeKanban = () => {
     const collapsedState = JSON.parse(localStorage.getItem('collapsedColumns')) || {};
     kanbanBoard.innerHTML = STATUS_LIST.map(status => {
       const isCollapsed = collapsedState[status];
-      const searchInputHTML = `<div class="my-2"><input type="search" data-status="${status}" placeholder="Buscar por Placa..." class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 search-input"></div>`;
+      const searchInputHTML = status === 'Entregue'
+        ? `<div class="my-2"><input type="search" data-status="${status}" placeholder="Buscar por Placa..." class="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 search-input-entregue"></div>`
+        : '';
       const columnLedHTML = isCollapsed ? '<div class="column-led ml-2"></div>' : '';
       return `<div class="status-column p-4"><div class="flex justify-between items-center cursor-pointer toggle-column-btn mb-2" data-status="${status}"><div class="flex items-center"><h3 class="font-bold text-gray-800">${formatStatus(status)}</h3>${columnLedHTML}</div><i class='bx bxs-chevron-down transition-transform ${isCollapsed ? 'rotate-180' : ''}'></i></div>${searchInputHTML}<div class="space-y-3 vehicle-list ${isCollapsed ? 'collapsed' : ''}" data-status="${status}"></div></div>`;
     }).join('');
@@ -147,25 +226,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const priorityIndicatorHTML = os.priority ? `<div class="priority-indicator priority-${os.priority}" title="Urgência: ${os.priority}"></div>` : '';
     return `<div id="${os.id}" class="vehicle-card status-${os.status}" data-os-id="${os.id}">${priorityIndicatorHTML}<div class="flex justify-between items-start"><div class="card-clickable-area cursor-pointer flex-grow"><p class="font-bold text-base text-gray-800">${os.placa}</p><p class="text-sm text-gray-600">${os.modelo}</p><div class="text-xs mt-1">${kmInfo}</div><div class="text-xs">${responsibleInfo}</div></div><div class="flex flex-col -mt-1 -mr-1">${nextButton}${prevButton}</div></div></div>`;
   };
-  
+
   const renderDeliveredColumn = () => {
       const list = kanbanBoard.querySelector('.vehicle-list[data-status="Entregue"]');
       if (!list) return;
-      const searchInput = kanbanBoard.querySelector('.search-input[data-status="Entregue"]');
+      const searchInput = kanbanBoard.querySelector('.search-input-entregue');
       const searchTerm = searchInput ? searchInput.value.toUpperCase().trim() : '';
       let deliveredItems = Object.values(allServiceOrders).filter(os => os.status === 'Entregue');
       if (searchTerm) {
-          deliveredItems = deliveredItems.filter(os => os.placa.toUpperCase().includes(searchTerm) || os.modelo.toUpperCase().includes(searchTerm));
+          deliveredItems = deliveredItems.filter(os => (os.placa && os.placa.toUpperCase().includes(searchTerm)) || (os.modelo && os.modelo.toUpperCase().includes(searchTerm)));
       }
       deliveredItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       list.innerHTML = deliveredItems.map(os => createCardHTML(os)).join('');
   };
 
-  const listenToServiceOrdersOptimized = () => {
+  const listenToServiceOrders = () => {
     const osRef = db.ref('serviceOrders');
     osRef.on('child_added', snapshot => {
       const os = { ...snapshot.val(), id: snapshot.key };
-      allServiceOrders[os.id] = os; 
+      allServiceOrders[os.id] = os;
       if (os.status === 'Entregue') {
         renderDeliveredColumn();
       } else {
@@ -177,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     osRef.on('child_changed', snapshot => {
       const os = { ...snapshot.val(), id: snapshot.key };
       const oldOs = allServiceOrders[os.id];
-      allServiceOrders[os.id] = os; 
+      allServiceOrders[os.id] = os;
       const existingCard = document.getElementById(os.id);
       if (oldOs && oldOs.status !== os.status) {
         if (existingCard) existingCard.remove();
@@ -188,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (newList) newList.insertAdjacentHTML('beforeend', createCardHTML(os));
         }
         if(oldOs.status === 'Entregue') { renderDeliveredColumn(); }
-      } 
+      }
       else if (existingCard) {
         if (os.status === 'Entregue') {
             renderDeliveredColumn();
@@ -196,6 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
             existingCard.outerHTML = createCardHTML(os);
         }
       }
+       if (detailsModal.classList.contains('flex') && document.getElementById('logOsId').value === os.id) {
+            renderTimeline(os);
+       }
       updateAttentionPanel();
     });
     osRef.on('child_removed', snapshot => {
@@ -221,35 +303,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const vehiclesInStatus = Object.values(allServiceOrders).filter(os => os.status === statusKey);
         const hasVehicles = vehiclesInStatus.length > 0;
         const blinkingClass = (hasVehicles && config.blinkClass && !attentionPanelContainer.classList.contains('collapsed')) ? config.blinkClass : '';
-        const vehicleListHTML = hasVehicles 
+        const vehicleListHTML = hasVehicles
             ? vehiclesInStatus.map(os => `<p class="cursor-pointer attention-vehicle text-white hover:text-blue-300" data-os-id="${os.id}">${os.placa} - ${os.modelo}</p>`).join('')
             : `<p class="text-gray-400">- Vazio -</p>`;
         return `<div class="attention-box p-2 rounded-md bg-gray-900 border-2 border-gray-700 ${blinkingClass}" data-status-key="${statusKey}"><h3 class="text-center text-${config.color}-400 font-bold text-xs sm:text-sm truncate">${config.label}</h3><div class="mt-1 text-center text-white text-xs space-y-1 h-16 overflow-y-auto">${vehicleListHTML}</div></div>`;
     }).join('');
     updateLedState(vehiclesTriggeringAlert);
   };
-  
-  const loginUser = (user) => {
-    currentUser = user;
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    document.getElementById('currentUserName').textContent = user.name;
-    userScreen.classList.add('hidden');
-    app.classList.remove('hidden');
-    initializeKanban();
-    listenToServiceOrdersOptimized(); 
-    listenToNotifications();
-  };
-  
-  const checkLoggedInUser = () => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) loginUser(JSON.parse(storedUser));
-    else {
-      userList.innerHTML = USERS.map(user =>
-        `<div class="p-4 bg-gray-100 rounded-lg hover:bg-blue-100 cursor-pointer user-btn transition-all duration-200" data-user='${JSON.stringify(user)}'><p class="font-semibold">${user.name}</p><p class="text-sm text-gray-500">${user.role}</p></div>`
-      ).join('');
-    }
-  };
-  
+
   function sendTeamNotification(message) {
       if (!currentUser) return;
       const notificationRef = db.ref('notifications').push();
@@ -266,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
           snapshot.ref.remove();
       });
   }
-  
+
   const updateLedState = (vehiclesTriggeringAlert) => {
     if (vehiclesTriggeringAlert.size > 0 && attentionPanelContainer.classList.contains('collapsed')) {
         alertLed.classList.remove('hidden');
@@ -274,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alertLed.classList.add('hidden');
     }
   };
-  
+
   const updateServiceOrderStatus = async (osId, newStatus) => {
     const os = allServiceOrders[osId];
     if (!os) return;
@@ -293,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNotification("Falha ao mover O.S. Tente novamente.", "error");
     }
   };
-  
+
   const openDetailsModal = (osId) => {
     const os = allServiceOrders[osId];
     if (!os) {
@@ -326,46 +387,51 @@ document.addEventListener('DOMContentLoaded', () => {
     postLogActions.style.display = 'none';
     renderTimeline(os);
     renderMediaGallery(os);
-    const existingSignature = detailsModal.querySelector('.dev-signature-modal');
-    if (existingSignature) { existingSignature.remove(); }
-    const actionsSection = detailsModal.querySelector('.os-actions-section');
-    if (actionsSection) {
-        const signatureDiv = document.createElement('div');
-        signatureDiv.className = 'dev-signature-modal text-center text-xs text-gray-500 mt-4 px-4';
-        signatureDiv.innerHTML = `<p>Desenvolvido com 🤖 por <strong>thIAguinho Soluções</strong></p>`;
-        actionsSection.appendChild(signatureDiv);
-    }
     detailsModal.classList.remove('hidden');
     detailsModal.classList.add('flex');
   };
-  
+
   const renderTimeline = (os) => {
-    const timelineContainer = document.getElementById('timelineContainer');
     const logs = os.logs || {};
-    timelineContainer.innerHTML = Object.values(logs).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(log => {
+    const logEntries = Object.entries(logs).sort(([,a], [,b]) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    timelineContainer.innerHTML = logEntries.map(([logId, log]) => {
       const date = new Date(log.timestamp);
       const formattedDate = date.toLocaleDateString('pt-BR');
       const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
       let iconClass = 'bx-message-detail';
       let itemClass = 'timeline-item-log';
       if (log.type === 'status') { iconClass = 'bx-transfer'; itemClass = 'timeline-item-status'; }
       else if (log.value) { iconClass = 'bx-dollar'; itemClass = 'timeline-item-value'; }
-      return `<div class="timeline-item ${itemClass}"><div class="timeline-icon"><i class='bx ${iconClass}'></i></div><div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between items-start mb-1"><h4 class="font-semibold text-gray-800 text-sm">${log.user}</h4><span class="text-xs text-gray-500">${formattedDate} ${formattedTime}</span></div><p class="text-gray-700 text-sm">${log.description}</p>${log.parts ? `<p class="text-gray-600 text-xs mt-1"><strong>Peças:</strong> ${log.parts}</p>` : ''}${log.value ? `<p class="text-green-600 text-xs mt-1"><strong>Valor:</strong> R$ ${parseFloat(log.value).toFixed(2)}</p>` : ''}</div></div>`;
+
+      const canDelete = (currentUser.role === 'Gestor' || currentUser.role === 'Atendente') && log.description && !log.description.startsWith('ATT EXCLUIDA');
+      const deleteButtonHTML = canDelete
+        ? `<button class="delete-log-btn" data-os-id="${os.id}" data-log-id="${logId}" title="Excluir esta atualização"><i class='bx bx-x text-lg'></i></button>`
+        : '';
+
+      const descriptionHTML = log.description && log.description.startsWith('ATT EXCLUIDA')
+        ? `<p class="text-red-500 italic text-sm">${log.description}</p>`
+        : `<p class="text-gray-700 text-sm">${log.description || ''}</p>`;
+
+      return `<div class="timeline-item ${itemClass}"><div class="timeline-icon"><i class='bx ${iconClass}'></i></div><div class="bg-gray-50 p-3 rounded-lg relative">${deleteButtonHTML}<div class="flex justify-between items-start mb-1"><h4 class="font-semibold text-gray-800 text-sm">${log.user}</h4><span class="text-xs text-gray-500">${formattedDate} ${formattedTime}</span></div>${descriptionHTML}${log.parts ? `<p class="text-gray-600 text-xs mt-1"><strong>Peças:</strong> ${log.parts}</p>` : ''}${log.value ? `<p class="text-green-600 text-xs mt-1"><strong>Valor:</strong> R$ ${parseFloat(log.value).toFixed(2)}</p>` : ''}</div></div>`;
     }).join('');
-    if (Object.keys(logs).length === 0) {
+
+    if (logEntries.length === 0) {
       timelineContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum registro encontrado.</p>';
     }
   };
-  
+
   const renderMediaGallery = (os) => {
     const thumbnailGrid = document.getElementById('thumbnail-grid');
     const media = os.media || [];
     lightboxMedia = Object.values(media);
     thumbnailGrid.innerHTML = lightboxMedia.map((item, index) => {
+        if (!item || !item.type) return '';
         const isImage = item.type.startsWith('image/');
         const isVideo = item.type.startsWith('video/');
         const isPdf = item.type === 'application/pdf';
-        let thumbnailContent = `<i class='bx bx-file text-4xl text-gray-500'></i>`; 
+        let thumbnailContent = `<i class='bx bx-file text-4xl text-gray-500'></i>`;
         if (isImage) { thumbnailContent = `<img src="${item.url}" alt="Imagem ${index + 1}" loading="lazy" class="w-full h-full object-cover">`; }
         else if (isVideo) { thumbnailContent = `<i class='bx bx-play-circle text-4xl text-blue-500'></i>`; }
         else if (isPdf) { thumbnailContent = `<i class='bx bxs-file-pdf text-4xl text-red-500'></i>`; }
@@ -375,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
       thumbnailGrid.innerHTML = `<div class="col-span-full text-center py-8 text-gray-400"><i class='bx bx-image text-4xl mb-2'></i><p class="text-sm">Nenhuma mídia adicionada</p></div>`;
     }
   };
-  
+
   const exportOsToPrint = (osId) => {
     const os = allServiceOrders[osId];
     if (!os) { showNotification('Dados da O.S. não encontrados.', 'error'); return; }
@@ -390,18 +456,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<tr><td>${formatDate(log.timestamp)}</td><td>${log.user}</td><td>${log.description}</td><td>${log.parts || '---'}</td><td style="text-align: right;">${log.value ? `R$ ${parseFloat(log.value).toFixed(2)}` : '---'}</td></tr>`;
     }).join('');
     const media = os.media ? Object.values(os.media) : [];
-    const photos = media.filter(item => item.type.startsWith('image/'));
+    const photos = media.filter(item => item && item.type.startsWith('image/'));
     const photosHtml = photos.length > 0 ? `<div class="section"><h2>Fotos Anexadas</h2><div class="photo-gallery">${photos.map(photo => `<img src="${photo.url}" alt="Foto da O.S.">`).join('')}</div></div>` : '';
-    const printHtml = `<html><head><title>Ordem de Serviço - ${os.placa}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;padding:20px;color:#333}.container{max-width:800px;margin:auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.header h1{margin:0;font-size:24px}.header p{margin:5px 0}.section{margin-bottom:20px;border:1px solid #ccc;border-radius:8px;padding:15px;page-break-inside:avoid}.section h2{margin-top:0;font-size:18px;border-bottom:1px solid #eee;padding-bottom:5px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid-item strong{display:block;color:#555}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}th{background-color:#f2f2f2}.total{text-align:right;font-size:18px;font-weight:bold;margin-top:20px}.footer{text-align:center;margin-top:50px;padding-top:20px;border-top:1px solid #ccc}.signature{margin-top:60px}.signature-line{border-bottom:1px solid #000;width:300px;margin:0 auto}.signature p{margin-top:5px;font-size:14px}.photo-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}.photo-gallery img{width:100%;height:auto;border:1px solid #ddd;border-radius:4px}.dev-signature{margin-top:40px;font-size:12px;color:#888}.dev-signature strong{color:#555}@media print{body{padding:10px}.no-print{display:none}}</style></head><body><div class="container"><div class="header"><h1>CHEVRON Bosch Car Service</h1><p>Ordem de Serviço</p></div><div class="section"><h2>Detalhes da O.S.</h2><div class="grid"><div class="grid-item"><strong>Placa:</strong> ${os.placa}</div><div class="grid-item"><strong>Modelo:</strong> ${os.modelo}</div><div class="grid-item"><strong>Cliente:</strong> ${os.cliente}</div><div class="grid-item"><strong>Telefone:</strong> ${os.telefone||"N/A"}</div><div class="grid-item"><strong>KM:</strong> ${os.km?new Intl.NumberFormat("pt-BR").format(os.km):"N/A"}</div><div class="grid-item"><strong>Data de Abertura:</strong> ${formatDate(os.createdAt)}</div><div class="grid-item"><strong>Atendente:</strong> ${os.responsible||"N/A"}</div></div></div>${os.observacoes?`<div class="section"><h2>Queixa do Cliente / Observações Iniciais</h2><p style="white-space: pre-wrap;">${os.observacoes}</p></div>`:""}<div class="section"><h2>Histórico de Serviços e Peças</h2><table><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Descrição</th><th>Peças</th><th style="text-align: right;">Valor</th></tr></thead><tbody>${timelineHtml||'<tr><td colspan="5" style="text-align: center;">Nenhum registro no histórico.</td></tr>'}</tbody></table><div class="total">Total: R$ ${totalValue.toFixed(2)}</div></div>${photosHtml}<div class="footer"><div class="signature"><div class="signature-line"></div><p>Assinatura do Cliente</p></div><p>Documento gerado em: ${new Date().toLocaleString("pt-BR")}</p><div class="dev-signature"><p>Desenvolvido com 🚀 por <strong>thIAguinho Soluções</strong></p></div></div></div><script>window.onload=function(){window.print();setTimeout(function(){window.close()},100)}<\/script></body></html>`;
+    const printHtml = `<html><head><title>Ordem de Serviço - ${os.placa}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;padding:20px;color:#333}.container{max-width:800px;margin:auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.header h1{margin:0;font-size:24px}.header p{margin:5px 0}.section{margin-bottom:20px;border:1px solid #ccc;border-radius:8px;padding:15px;page-break-inside:avoid}.section h2{margin-top:0;font-size:18px;border-bottom:1px solid #eee;padding-bottom:5px;margin-bottom:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid-item strong{display:block;color:#555}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #ddd;padding:8px;text-align:left;font-size:14px}th{background-color:#f2f2f2}.total{text-align:right;font-size:18px;font-weight:bold;margin-top:20px}.footer{text-align:center;margin-top:50px;padding-top:20px;border-top:1px solid #ccc}.signature{margin-top:60px}.signature-line{border-bottom:1px solid #000;width:300px;margin:0 auto}.signature p{margin-top:5px;font-size:14px}.photo-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}.photo-gallery img{width:100%;height:auto;border:1px solid #ddd;border-radius:4px}.dev-signature{margin-top:40px;font-size:12px;color:#888}.dev-signature strong{color:#555}@media print{body{padding:10px}.no-print{display:none}}</style></head><body><div class="container"><div class="header"><h1>CHEVRON Bosch Car Service</h1><p>Ordem de Serviço</p></div><div class="section"><h2>Detalhes da O.S.</h2><div class="grid"><div class="grid-item"><strong>Placa:</strong> ${os.placa}</div><div class="grid-item"><strong>Modelo:</strong> ${os.modelo}</div><div class="grid-item"><strong>Cliente:</strong> ${os.cliente}</div><div class="grid-item"><strong>Telefone:</strong> ${os.telefone||"N/A"}</div><div class="grid-item"><strong>KM:</strong> ${os.km?new Intl.NumberFormat("pt-BR").format(os.km):"N/A"}</div><div class="grid-item"><strong>Data de Abertura:</strong> ${formatDate(os.createdAt)}</div><div class="grid-item"><strong>Atendente:</strong> ${os.responsible||"N/A"}</div></div></div>${os.observacoes?`<div class="section"><h2>Queixa do Cliente / Observações Iniciais</h2><p style="white-space: pre-wrap;">${os.observacoes}</p></div>`:""}<div class="section"><h2>Histórico de Serviços e Peças</h2><table><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Descrição</th><th>Peças</th><th style="text-align: right;">Valor</th></tr></thead><tbody>${timelineHtml||'<tr><td colspan="5" style="text-align: center;">Nenhum registro no histórico.</td></tr>'}</tbody></table><div class="total">Total: R$ ${totalValue.toFixed(2)}</div></div>${photosHtml}<div class="footer"><div class="signature"><div class="signature-line"></div><p>Assinatura do Cliente</p></div><p>Documento gerado em: ${new Date().toLocaleString("pt-BR")}</p></div></div><script>window.onload=function(){window.print();setTimeout(function(){window.close()},100)}<\/script></body></html>`;
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printHtml);
     printWindow.document.close();
   };
-  
+
   const openLightbox = (index) => {
     if (!lightboxMedia || lightboxMedia.length === 0) return;
     currentLightboxIndex = index;
     const media = lightboxMedia[index];
+    if (!media || !media.type) return; 
     if (media.type === 'application/pdf') { window.open(media.url, '_blank'); return; }
     const lightboxContent = document.getElementById('lightbox-content');
     if (media.type.startsWith('image/')) {
@@ -417,31 +484,39 @@ document.addEventListener('DOMContentLoaded', () => {
     lightbox.classList.remove('hidden');
     lightbox.classList.add('flex');
   };
-  
+
   // --- LISTENERS DE EVENTOS ---
-  userList.addEventListener('click', (e) => {
-    const userBtn = e.target.closest('.user-btn');
-    if (userBtn) { loginUser(JSON.parse(userBtn.dataset.user)); }
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    loginError.textContent = '';
+    const selectedUserName = userSelect.value;
+    const enteredPassword = passwordInput.value;
+    if (!selectedUserName) {
+        loginError.textContent = 'Por favor, selecione um usuário.';
+        return;
+    }
+    const user = USERS.find(u => u.name === selectedUserName);
+    if (user && user.password === enteredPassword) {
+        loginUser(user);
+    } else {
+        loginError.textContent = 'Senha incorreta. Tente novamente.';
+        passwordInput.value = '';
+    }
   });
-  
-  logoutButton.addEventListener('click', () => {
-    localStorage.removeItem('currentUser');
-    db.ref('serviceOrders').off();
-    db.ref('notifications').off();
-    location.reload();
-  });
-  
+
+  logoutButton.addEventListener('click', logoutUser);
+
   togglePanelBtn.addEventListener('click', () => {
     attentionPanelContainer.classList.toggle('collapsed');
     togglePanelBtn.querySelector('i').classList.toggle('rotate-180');
     updateAttentionPanel();
   });
-  
+
   attentionPanel.addEventListener('click', (e) => {
     const vehicleElement = e.target.closest('.attention-vehicle');
     if (vehicleElement) { openDetailsModal(vehicleElement.dataset.osId); }
   });
-  
+
   kanbanBoard.addEventListener('click', (e) => {
     const card = e.target.closest('.vehicle-card');
     const moveBtn = e.target.closest('.btn-move-status');
@@ -466,37 +541,73 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   kanbanBoard.addEventListener('input', (e) => {
-      if (e.target.matches('.search-input')) {
-          const status = e.target.dataset.status;
-          const searchTerm = e.target.value.toUpperCase().trim();
-          if (status === 'Entregue') {
-              renderDeliveredColumn();
-              return;
-          }
-          const columnList = kanbanBoard.querySelector(`.vehicle-list[data-status="${status}"]`);
-          const cards = columnList.querySelectorAll('.vehicle-card');
-          cards.forEach(card => {
-              const placa = card.querySelector('.font-bold').textContent.toUpperCase();
-              const modelo = card.querySelector('.text-sm').textContent.toUpperCase();
-              if (placa.includes(searchTerm) || modelo.includes(searchTerm)) {
-                  card.style.display = '';
-              } else {
-                  card.style.display = 'none';
-              }
-          });
+      if (e.target.matches('.search-input-entregue')) {
+          renderDeliveredColumn();
       }
   });
+
+  globalSearchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toUpperCase().trim();
+
+    if (!searchTerm) {
+        globalSearchResults.innerHTML = '';
+        globalSearchResults.classList.add('hidden');
+        return;
+    }
+    
+    const matchingOrders = Object.values(allServiceOrders)
+        .filter(os => os.placa && os.placa.toUpperCase().includes(searchTerm))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); 
+
+    if (matchingOrders.length > 0) {
+        globalSearchResults.innerHTML = matchingOrders.map(os => `
+            <div class="search-result-item" data-os-id="${os.id}">
+                <p class="font-bold">${os.placa} - ${os.modelo}</p>
+                <p class="text-sm text-gray-600">Status: <span class="font-semibold text-blue-700">${formatStatus(os.status)}</span></p>
+            </div>
+        `).join('');
+        globalSearchResults.classList.remove('hidden');
+    } else {
+        globalSearchResults.innerHTML = '<div class="p-3 text-center text-gray-500">Nenhum veículo encontrado.</div>';
+        globalSearchResults.classList.remove('hidden');
+    }
+  });
   
+  globalSearchResults.addEventListener('click', (e) => {
+      const resultItem = e.target.closest('.search-result-item');
+      if (resultItem) {
+          const osId = resultItem.dataset.osId;
+          openDetailsModal(osId);
+          globalSearchInput.value = ''; 
+          globalSearchResults.innerHTML = '';
+          globalSearchResults.classList.add('hidden');
+      }
+  });
+
+  // Listener de clique geral para fechar modais E abrir lightbox
   document.addEventListener('click', (e) => {
+    // Fecha modais
     if (e.target.closest('.btn-close-modal') || e.target.id === 'detailsModal') { detailsModal.classList.add('hidden'); }
     if (e.target.closest('.btn-close-modal') || e.target.id === 'osModal') { osModal.classList.add('hidden'); }
+    
+    // Esconde resultados da busca ao clicar fora
+    const searchContainer = document.querySelector('.search-container');
+    if (searchContainer && !searchContainer.contains(e.target)) {
+        globalSearchResults.classList.add('hidden');
+    }
+
+    // **FIX**: Abre o lightbox ao clicar em uma miniatura
+    const thumbnailItem = e.target.closest('.thumbnail-item');
+    if (thumbnailItem && thumbnailItem.dataset.index !== undefined) {
+      openLightbox(parseInt(thumbnailItem.dataset.index));
+    }
   });
 
   detailsModal.addEventListener('click', (e) => {
     const exportBtn = e.target.closest('#exportOsBtn');
     if (exportBtn) { exportOsToPrint(document.getElementById('logOsId').value); }
   });
-  
+
   addOSBtn.addEventListener('click', () => {
     document.getElementById('osModalTitle').textContent = 'Nova Ordem de Serviço';
     document.getElementById('osId').value = '';
@@ -506,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
     osModal.classList.remove('hidden');
     osModal.classList.add('flex');
   });
-  
+
   osForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const priority = document.querySelector('input[name="osPrioridade"]:checked').value;
@@ -527,7 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const osId = document.getElementById('osId').value;
     if (osId) {
-      db.ref(`serviceOrders/${osId}`).update(osData);
+      const { logs, media, ...dataToUpdate } = osData;
+      db.ref(`serviceOrders/${osId}`).update(dataToUpdate);
       sendTeamNotification(`O.S. ${osData.placa} foi atualizada por ${currentUser.name}`);
     } else {
       const newOsRef = db.ref('serviceOrders').push();
@@ -536,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     osModal.classList.add('hidden');
   });
-  
+
   logForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -550,9 +662,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         if (filesToUpload && filesToUpload.length > 0) {
             submitBtn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Enviando mídia...`;
-            const mediaPromises = filesToUpload.map(file => 
-                uploadFileToCloudinary(file).then(url => ({ 
-                    type: file.type, url: url, name: file.name, timestamp: new Date().toISOString() 
+            const mediaPromises = filesToUpload.map(file =>
+                uploadFileToCloudinary(file).then(url => ({
+                    type: file.type, url: url, name: file.name, timestamp: new Date().toISOString()
                 }))
             );
             const mediaResults = await Promise.all(mediaPromises);
@@ -567,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logForm.reset();
         filesToUpload = [];
         document.getElementById('fileName').textContent = '';
-        postLogActions.style.display = 'flex';
+        postLogActions.style.display = 'block';
         sendTeamNotification(`Novo registro adicionado à O.S. ${allServiceOrders[osId].placa} por ${currentUser.name}`);
     } catch (error) {
         console.error("Erro ao salvar registro:", error);
@@ -577,23 +689,23 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.innerHTML = `<i class='bx bx-message-square-add'></i> Adicionar ao Histórico`;
     }
   });
-  
+
   document.getElementById('btn-move-next').addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
     const nextStatus = STATUS_LIST[STATUS_LIST.indexOf(os.status) + 1];
     if (nextStatus) { updateServiceOrderStatus(osId, nextStatus); detailsModal.classList.add('hidden'); }
   });
-  
+
   document.getElementById('btn-move-prev').addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
     const prevStatus = STATUS_LIST[STATUS_LIST.indexOf(os.status) - 1];
     if (prevStatus) { updateServiceOrderStatus(osId, prevStatus); detailsModal.classList.add('hidden'); }
   });
-  
+
   document.getElementById('btn-stay').addEventListener('click', () => { postLogActions.style.display = 'none'; });
-  
+
   kmUpdateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const osId = document.getElementById('logOsId').value;
@@ -607,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sendTeamNotification(`KM da O.S. ${allServiceOrders[osId].placa} atualizado para ${newKm} por ${currentUser.name}`);
     }
   });
-  
+
   deleteOsBtn.addEventListener('click', () => {
     const osId = document.getElementById('logOsId').value;
     const os = allServiceOrders[osId];
@@ -645,7 +757,47 @@ document.addEventListener('DOMContentLoaded', () => {
           confirmDeleteModal.classList.remove('flex');
       }
   });
-  
+
+  timelineContainer.addEventListener('click', (e) => {
+      const deleteButton = e.target.closest('.delete-log-btn');
+      if (deleteButton) {
+          const { osId, logId } = deleteButton.dataset;
+          confirmDeleteLogText.textContent = 'Você tem certeza que deseja excluir esta atualização do histórico? Esta ação não pode ser desfeita.';
+          confirmDeleteLogBtn.dataset.osId = osId;
+          confirmDeleteLogBtn.dataset.logId = logId;
+          confirmDeleteLogModal.classList.remove('hidden');
+          confirmDeleteLogModal.classList.add('flex');
+      }
+  });
+
+  confirmDeleteLogBtn.addEventListener('click', async () => {
+      const { osId, logId } = confirmDeleteLogBtn.dataset;
+      if (osId && logId) {
+          try {
+              await db.ref(`serviceOrders/${osId}/logs/${logId}`).remove();
+              const exclusionLogEntry = {
+                  timestamp: new Date().toISOString(),
+                  user: currentUser.name,
+                  description: `ATT EXCLUIDA POR: ${currentUser.name}`,
+                  type: 'log'
+              };
+              await db.ref(`serviceOrders/${osId}/logs`).push().set(exclusionLogEntry);
+              showNotification('Atualização excluída do histórico.', 'success');
+          } catch (error) {
+              console.error("Erro ao excluir atualização:", error);
+              showNotification('Falha ao excluir a atualização.', 'error');
+          } finally {
+              confirmDeleteLogModal.classList.add('hidden');
+              confirmDeleteLogModal.classList.remove('flex');
+          }
+      }
+  });
+
+  cancelDeleteLogBtn.addEventListener('click', () => {
+      confirmDeleteLogModal.classList.add('hidden');
+      confirmDeleteLogModal.classList.remove('flex');
+  });
+
   openCameraBtn.addEventListener('click', () => {
     mediaInput.setAttribute('accept', 'image/*');
     mediaInput.setAttribute('capture', 'camera');
@@ -653,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mediaInput.value = null;
     mediaInput.click();
   });
-  
+
   openGalleryBtn.addEventListener('click', () => {
     mediaInput.setAttribute('accept', 'image/*,video/*,application/pdf');
     mediaInput.removeAttribute('capture');
@@ -661,7 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mediaInput.value = null;
     mediaInput.click();
   });
-  
+
   mediaInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) { filesToUpload.push(...e.target.files); }
     if (filesToUpload.length > 0) {
@@ -670,29 +822,25 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('fileName').textContent = '';
     }
   });
-  
-  document.addEventListener('click', (e) => {
-    const thumbnailItem = e.target.closest('.thumbnail-item');
-    if (thumbnailItem && thumbnailItem.dataset.index !== undefined) {
-      openLightbox(parseInt(thumbnailItem.dataset.index));
-    }
-  });
-  
+
   document.getElementById('lightbox-prev').addEventListener('click', () => {
     if (currentLightboxIndex > 0) { openLightbox(currentLightboxIndex - 1); }
   });
-  
+
   document.getElementById('lightbox-next').addEventListener('click', () => {
     if (currentLightboxIndex < lightboxMedia.length - 1) { openLightbox(currentLightboxIndex + 1); }
   });
-  
+
   document.getElementById('lightbox-close').addEventListener('click', () => { lightbox.classList.add('hidden'); });
   document.getElementById('lightbox-close-bg').addEventListener('click', () => { lightbox.classList.add('hidden'); });
-  
+
   document.getElementById('lightbox-copy').addEventListener('click', () => {
     const media = lightboxMedia[currentLightboxIndex];
-    navigator.clipboard.writeText(media.url).then(() => { showNotification('URL copiada para a área de transferência!'); });
+    if (media && media.url) {
+        navigator.clipboard.writeText(media.url).then(() => { showNotification('URL copiada para a área de transferência!'); });
+    }
   });
-  
-  checkLoggedInUser();
+
+  // --- INICIALIZAÇÃO DO LOGIN ---
+  initializeLoginScreen();
 });
